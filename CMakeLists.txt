@@ -7,20 +7,46 @@ endif()
 
 set(GLFW_LIBRARY_TYPE SHARED)
 set(BUILD_SHARED_LIBS 1)
-
 add_subdirectory(lib/glfw)
+
 add_subdirectory(lib/glm)
 
-file(GLOB SOURCES "src/*.cpp")
 find_package(Vulkan REQUIRED)
 
+file(GLOB SOURCES "src/*.cpp")
 add_executable(${PROJECT_NAME} ${SOURCES})
+
+file(GLOB SHADERS "src/*.comp")
+file(MAKE_DIRECTORY "shaders")
+
+find_program(GLSLC "glslc")
+add_custom_target(Shaders)
+foreach(shader ${SHADERS})
+    get_filename_component(shaderfilename ${shader} NAME_WE)
+
+    if(GLSLC)
+    add_custom_command(
+        OUTPUT "${CMAKE_BINARY_DIR}/shaders/${shaderfilename}.spv"
+        COMMAND ${GLSLC} ${shader} -o "${CMAKE_BINARY_DIR}/shaders/${shaderfilename}.spv"
+        DEPENDS ${shader}
+    )
+    else()
+    add_custom_command(
+        OUTPUT "${CMAKE_BINARY_DIR}/shaders/${shaderfilename}.spv"
+        COMMAND $ENV{VULKAN_SDK}/x86_64/glslc shader -o "${CMAKE_BINARY_DIR}/shaders/${shaderfilename}.spv"
+        DEPENDS ${shader}
+    )
+    endif()
+    
+    add_custom_target(${shaderfilename} DEPENDS "${CMAKE_BINARY_DIR}/shaders/${shaderfilename}.spv")
+    add_dependencies(Shaders ${shaderfilename}) 
+
+endforeach()
+
+
+
+
 target_include_directories(${PROJECT_NAME} PUBLIC lib/glfw/include)
 target_include_directories(${PROJECT_NAME} PUBLIC lib/glm)
 target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan glfw glm)
-
-#file(GLOB VULKAN_HEADERS "lib/Vulkan-Hpp/*.hpp")
-#target_precompile_headers(${PROJECT_NAME} PUBLIC ${VULKAN_HEADERS})
-#file(COPY "assets" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-#file(GLOB_RECURSE shaders "src/*.geom" "src/*.vert" "src/*.frag")
-#file(COPY ${shaders} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/shaders)
+add_dependencies(${PROJECT_NAME} Shaders)

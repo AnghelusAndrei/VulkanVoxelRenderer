@@ -40,6 +40,8 @@ private:
     void createDescriptorSetLayout();
     void createComputePipeline();
     void createCommandPool();
+    void createDescriptorPool();
+    void createDescriptorSets();
     void createCommandBuffers();
     void createSyncObjects();
 private:
@@ -70,8 +72,8 @@ private:
     vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
     void recordImageBarrier(vk::CommandBuffer buffer, vk::Image image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
     vk::AccessFlags scrAccess, vk::AccessFlags dstAccess, vk::PipelineStageFlags srcBind, vk::PipelineStageFlags dstBind);
-    vk::ShaderModule createShaderModule(const std::vector& code);
-    static std::vector readFile(const std::string& filename);
+    vk::ShaderModule createShaderModule(const std::vector<char>& code);
+    static std::vector<char> readFile(const std::string& filename);
 
     const std::vector<const char *> validationLayers = {
         "VK_LAYER_KHRONOS_validation"};
@@ -92,6 +94,8 @@ private:
     vk::PhysicalDevice physical_device_;
     vk::Device device_;
     vk::DescriptorSetLayout descriptorSetLayout;
+    vk::DescriptorPool descriptorPool;
+    std::vector<vk::DescriptorSet> descriptorSets;
     vk::Sampler imageSampler;
     vk::Pipeline pipeline;
 
@@ -116,6 +120,7 @@ private:
     std::vector<vk::Semaphore> imageAvailableSemaphores;
     std::vector<vk::Semaphore> renderFinishedSemaphores;
     std::vector<vk::Fence> inFlightFences;
+    std::vector<vk::Fence> imagesInFlight;
     uint32_t currentFrame = 0;
 
     bool framebufferResized = false;

@@ -49,9 +49,9 @@ public:
         return getStream(ERROR) << "[ERROR] ";
     }
 
-    std::ostream &print()
+    std::ostream &print(LoggingLevel level)
     {
-        return getStream(INFO);
+        return getStream(level);
     }
     std::runtime_error exception(std::string what)
     {
