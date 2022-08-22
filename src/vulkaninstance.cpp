@@ -8,11 +8,12 @@ VulkanInstance::VulkanInstance(VoxelEngine *engine) : engine_(engine)
     pickPhysicalDevice();
     createLogicalDevice();
     createSwapChain();
-    /*createImageViews();
-    createRenderPass();
-    createGraphicsPipeline();
-    createFramebuffers();
+    createImageViews();
+    createDescriptorSetLayout();
+    createComputePipeline();
     createCommandPool();
+    /*createDescriptorPool();
+    createDescriptorSets();
     createCommandBuffers();
     createSyncObjects();*/
 }
@@ -21,25 +22,24 @@ VulkanInstance::~VulkanInstance()
 {
     // cleanupSwapChain();
 
-    vkDestroyPipeline(device_, graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(device_, pipelineLayout, nullptr);
+    device_.destroyPipeline(graphicsPipeline, nullptr);
+    device_.destroyPipelineLayout(pipelineLayout, nullptr);
 
-    vkDestroyRenderPass(device_, renderPass, nullptr);
+    device_.destroyRenderPass(renderPass, nullptr);
 
     for (size_t i = 0; i < engine_->config_.MAX_FRAMES_IN_FLIGHT; i++)
     {
-        vkDestroySemaphore(device_, renderFinishedSemaphores[i], nullptr);
-        vkDestroySemaphore(device_, imageAvailableSemaphores[i], nullptr);
-        vkDestroyFence(device_, inFlightFences[i], nullptr);
+        device_.destroySemaphore(renderFinishedSemaphores[i], nullptr);
+        device_.destroySemaphore(imageAvailableSemaphores[i], nullptr);
+        device_.destroyFence(inFlightFences[i], nullptr);
     }
 
-    vkDestroyCommandPool(device_, commandPool, nullptr);
-
-    vkDestroyDevice(device_, nullptr);
+    device_.destroyCommandPool(commandPool, nullptr);
+    device_.destroy(nullptr);
 
     instance_.destroyDebugUtilsMessengerEXT(debug_messenger_, vk::Optional<const vk::AllocationCallbacks>(nullptr), dldy_);
     instance_.destroySurfaceKHR(surface_, nullptr);
-    vkDestroyInstance(instance_, nullptr);
+    instance_.destroy(nullptr);
 }
 VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
 {
@@ -327,4 +327,157 @@ void VulkanInstance::createSwapChain(){
 
         swapChainImageFormat = surfaceFormat.format;
         swapChainExtent = extent;
+}
+
+void VulkanInstance::createImageViews(){
+        swapChainImageViews.resize(swapChainImages.size());
+
+        for (size_t i = 0; i < swapChainImages.size(); i++) {
+            vk::ImageViewCreateInfo createInfo{};
+            createInfo.sType = vk::StructureType::eImageViewCreateInfo;
+            createInfo.image = swapChainImages[i];
+            createInfo.viewType = vk::ImageViewType::e2D;
+            createInfo.format = swapChainImageFormat;
+            createInfo.components.r = vk::ComponentSwizzle::eIdentity;
+            createInfo.components.g = vk::ComponentSwizzle::eIdentity;
+            createInfo.components.b = vk::ComponentSwizzle::eIdentity;
+            createInfo.components.a = vk::ComponentSwizzle::eIdentity;
+            createInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+            createInfo.subresourceRange.baseMipLevel = 0;
+            createInfo.subresourceRange.levelCount = 1;
+            createInfo.subresourceRange.baseArrayLayer = 0;
+            createInfo.subresourceRange.layerCount = 1;
+
+
+            if (device_.createImageView(&createInfo, nullptr, &swapChainImageViews[i]) != vk::Result::eSuccess) {
+                throw std::runtime_error("failed to create image views!");
+            }
+        }
+}
+
+void VulkanInstance::createDescriptorSetLayout() {
+        vk::DescriptorSetLayoutBinding uboLayoutBinding{};//VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO
+        uboLayoutBinding.binding = 0;
+        uboLayoutBinding.descriptorType = vk::DescriptorType::eStorageImage;
+        uboLayoutBinding.descriptorCount = 1;
+        uboLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eCompute;
+        uboLayoutBinding.pImmutableSamplers = &imageSampler;
+
+        vk::DescriptorSetLayoutCreateInfo layoutInfo{};
+        layoutInfo.sType = vk::StructureType::eDescriptorSetLayoutCreateInfo;
+        layoutInfo.bindingCount = 1;
+        layoutInfo.pBindings = &uboLayoutBinding;
+
+        if (device_.createDescriptorSetLayout(&layoutInfo, nullptr, &descriptorSetLayout) != vk::Result::eSuccess) {
+            throw std::runtime_error("failed to create descriptor set layout!");
+        }
+}
+
+static std::vector VulkanInstance::readFile(const std::string& filename) {
+    std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+    if (!file.is_open()) {
+        throw std::runtime_error("failed to open file!");
+    }
+
+    size_t fileSize = (size_t)file.tellg();
+    std::vector buffer(fileSize);
+
+    file.seekg(0);
+    file.read(buffer.data(), fileSize);
+
+    file.close();
+
+    return buffer;
+}
+
+vk::ShaderModule VulkanInstance::createShaderModule(const std::vector& code) {
+    vk::ShaderModuleCreateInfo createInfo{};//VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO
+    createInfo.sType = vk::StructureType::eShaderModuleCreateInfo;
+    createInfo.codeSize = code.size();
+    createInfo.pCode = reinterpret_cast(code.data());
+
+    vk::ShaderModule shaderModule;
+    if (device_.createShaderModule(&createInfo, nullptr, &shaderModule) != vk::Result::eSuccess) {
+        throw std::runtime_error("failed to create shader module!");
+    }
+
+    return shaderModule;
+}
+
+void VulkanInstance::createComputePipeline() {
+    auto shader = readFile("shaders/comp.spv");
+    vk::ShaderModule shaderModule = createShaderModule(shader);
+
+    vk::PipelineShaderStageCreateInfo shaderStageInfo{};//VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO
+    shaderStageInfo.sType = vk::StructureType::ePipelineShaderStageCreateInfo;
+    shaderStageInfo.stage = vk::ShaderStageFlagBits::eCompute;
+    shaderStageInfo.module = shaderModule;
+    shaderStageInfo.pName = "main";
+
+    vk::PipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = vk::StructureType::ePipelineLayoutCreateInfo;
+    pipelineLayoutInfo.setLayoutCount = 1; // Optional
+    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout; // Optional
+    pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+    pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+
+    if (device_.createPipelineLayout(&pipelineLayoutInfo, nullptr, &pipelineLayout) != vk::Result::eSuccess) {
+        throw std::runtime_error("failed to create pipeline layout!");
+    }
+
+    vk::ComputePipelineCreateInfo info{};
+    info.sType = vk::StructureType::eComputePipelineCreateInfo;
+    info.layout = pipelineLayout;
+    info.basePipelineIndex = -1;
+    info.basePipelineHandle = VK_NULL_HANDLE;
+    info.stage = shaderStageInfo;
+
+
+    if (device_.createComputePipelines(VK_NULL_HANDLE,1,&info,nullptr,&pipeline) != vk::Result::eSuccess) {
+        throw std::runtime_error("compute shader");
+    }
+
+    device_.destroyShaderModule(shaderModule, nullptr);
+}
+
+void VulkanInstance::createCommandPool() {
+    QueueFamilyIndices queueFamilyIndices = findQueueFamilies();
+
+    VkCommandPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.queueFamilyIndex = queueFamilyIndices.computeFamily.value();
+
+    if (device_.createCommandPool(&poolInfo, nullptr, &commandPool) != vk::Result::eSuccess) {
+        throw std::runtime_error("failed to create command pool!");
+    }
+}
+
+void VulkanInstance::recordImageBarrier(vk::CommandBuffer buffer, vk::Image image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
+    vk::AccessFlags scrAccess, vk::AccessFlags dstAccess, vk::PipelineStageFlags srcBind, vk::PipelineStageFlags dstBind) {
+    vk::ImageMemoryBarrier barrier{};
+    barrier.image = image;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.oldLayout = oldLayout;
+    barrier.newLayout = newLayout;
+    barrier.srcAccessMask = scrAccess;
+    barrier.dstAccessMask = dstAccess;//VK_IMAGE_ASPECT_COLOR_BIT
+    barrier.sType = vk::StructureType::eImageMemoryBarrier;
+    vk::ImageSubresourceRange sub{};
+    sub.aspectMask = vk::ImageAspectFlagBits::eColor;
+    sub.baseArrayLayer = 0;
+    sub.baseMipLevel = 0;
+    sub.layerCount = VK_REMAINING_MIP_LEVELS;
+    sub.levelCount = VK_REMAINING_MIP_LEVELS;
+    barrier.subresourceRange = sub;
+
+    CmdPipelineBarrier(buffer, srcBind, dstBind,
+        0, 0, nullptr, 0, nullptr, 1, &barrier);
+}
+
+void VulkanInstance::createCommandBuffers() {
+}
+
+void VulkanInstance::createSyncObjects() {
 }

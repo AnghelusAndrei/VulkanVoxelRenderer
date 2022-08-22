@@ -36,6 +36,12 @@ private:
     void pickPhysicalDevice();
     void createLogicalDevice();
     void createSwapChain();
+    void createImageViews();
+    void createDescriptorSetLayout();
+    void createComputePipeline();
+    void createCommandPool();
+    void createCommandBuffers();
+    void createSyncObjects();
 private:
     VoxelEngine *engine_;
     struct QueueFamilyIndices
@@ -62,6 +68,10 @@ private:
     vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
     vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);
     vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
+    void recordImageBarrier(vk::CommandBuffer buffer, vk::Image image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
+    vk::AccessFlags scrAccess, vk::AccessFlags dstAccess, vk::PipelineStageFlags srcBind, vk::PipelineStageFlags dstBind);
+    vk::ShaderModule createShaderModule(const std::vector& code);
+    static std::vector readFile(const std::string& filename);
 
     const std::vector<const char *> validationLayers = {
         "VK_LAYER_KHRONOS_validation"};
@@ -81,6 +91,9 @@ private:
     vk::DispatchLoaderDynamic dldy_;
     vk::PhysicalDevice physical_device_;
     vk::Device device_;
+    vk::DescriptorSetLayout descriptorSetLayout;
+    vk::Sampler imageSampler;
+    vk::Pipeline pipeline;
 
     vk::Queue graphicsQueue;
     vk::Queue presentQueue;
