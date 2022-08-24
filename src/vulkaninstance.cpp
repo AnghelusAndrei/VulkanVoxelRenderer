@@ -265,14 +265,12 @@ vk::SurfaceFormatKHR VulkanInstance::chooseSwapSurfaceFormat(const std::vector<v
 {
     for (const auto &availableFormat : availableFormats)
     {
-        if (availableFormat.format == vk::Format::eB8G8R8A8Srgb && availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear &&
-            (physical_device_.getFormatProperties(availableFormat.format).optimalTilingFeatures & (vk::FormatFeatureFlagBits::eStorageImage | vk::FormatFeatureFlagBits::eColorAttachment)) == (vk::FormatFeatureFlagBits::eStorageImage | vk::FormatFeatureFlagBits::eColorAttachment))
+        if ((physical_device_.getFormatProperties(availableFormat.format).optimalTilingFeatures & (vk::FormatFeatureFlagBits::eStorageImage | vk::FormatFeatureFlagBits::eColorAttachment)) == (vk::FormatFeatureFlagBits::eStorageImage | vk::FormatFeatureFlagBits::eColorAttachment))
         {
             return availableFormat;
         }
     }
-
-    return availableFormats[0];
+    throw EXCEPTION("Failed to find storage bit swapchain format.");
 }
 
 vk::PresentModeKHR VulkanInstance::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> &availablePresentModes)
@@ -309,7 +307,38 @@ vk::Extent2D VulkanInstance::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR &
         return actualExtent;
     }
 }
-
+void VulkanInstance::createBuffer(const size_t size)
+{
+    QueueFamilyIndices indices = VulkanInstance::findQueueFamilies();
+    uint32_t index = indices.computeFamily.value();
+    vk::BufferCreateInfo bufferCreateInfo{
+        vk::BufferCreateFlags(),                 // Flags
+        size,                                    // Size
+        vk::BufferUsageFlagBits::eStorageBuffer, // Usage
+        vk::SharingMode::eExclusive,             // Sharing mode
+        1,                                       // Number of queue family indices
+        &index                                   // List of queue family indices
+    };
+    buffer = device_.createBuffer(bufferCreateInfo);
+    vk::MemoryRequirements bufferMemoryRequirements = device_.getBufferMemoryRequirements(buffer);
+    vk::PhysicalDeviceMemoryProperties memoryProperties = physical_device_.getMemoryProperties();
+    uint32_t MemoryTypeIndex = uint32_t(~0);
+    vk::DeviceSize MemoryHeapSize = uint32_t(~0);
+    for (uint32_t CurrentMemoryTypeIndex = 0; CurrentMemoryTypeIndex < memoryProperties.memoryTypeCount; ++CurrentMemoryTypeIndex)
+    {
+        vk::MemoryType MemoryType = memoryProperties.memoryTypes[CurrentMemoryTypeIndex];
+        if ((vk::MemoryPropertyFlagBits::eHostVisible & MemoryType.propertyFlags) &&
+            (vk::MemoryPropertyFlagBits::eHostCoherent & MemoryType.propertyFlags))
+        {
+            MemoryHeapSize = memoryProperties.memoryHeaps[MemoryType.heapIndex].size;
+            MemoryTypeIndex = CurrentMemoryTypeIndex;
+            break;
+        }
+    }
+    vk::MemoryAllocateInfo InBufferMemoryAllocateInfo(bufferMemoryRequirements.size, MemoryTypeIndex);
+    vk::DeviceMemory memory = device_.allocateMemory(InBufferMemoryAllocateInfo);
+    
+}
 void VulkanInstance::createSwapChain()
 {
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport();
@@ -336,7 +365,7 @@ void VulkanInstance::createSwapChain()
 
     QueueFamilyIndices indices = findQueueFamilies();
     uint32_t queueFamilyIndices[] = {indices.computeFamily.value(), indices.presentFamily.value()};
-    assert(indices.computeFamily==indices.presentFamily);
+    assert(indices.computeFamily == indices.presentFamily);
     if (indices.computeFamily != indices.presentFamily)
     {
         createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
@@ -358,7 +387,7 @@ void VulkanInstance::createSwapChain()
         throw std::runtime_error("failed to create swap chain!");
     }
 
-    swapChainImages=device_.getSwapchainImagesKHR(swapChain);
+    swapChainImages = device_.getSwapchainImagesKHR(swapChain);
 
     swapChainImageFormat = surfaceFormat.format;
     swapChainExtent = extent;
@@ -371,7 +400,6 @@ void VulkanInstance::createImageViews()
     for (size_t i = 0; i < swapChainImages.size(); i++)
     {
         vk::ImageViewCreateInfo createInfo{};
-        createInfo.sType = vk::StructureType::eImageViewCreateInfo;
         createInfo.image = swapChainImages[i];
         createInfo.viewType = vk::ImageViewType::e2D;
         createInfo.format = swapChainImageFormat;
@@ -570,7 +598,7 @@ void VulkanInstance::createDescriptorSets()
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = 0.0f;
 
-    if(device_.createSampler(&samplerInfo, nullptr, &imageSampler)!=vk::Result::eSuccess)
+    if (device_.createSampler(&samplerInfo, nullptr, &imageSampler) != vk::Result::eSuccess)
     {
         throw EXCEPTION("Failed to create the sampler");
     }
@@ -622,7 +650,7 @@ void VulkanInstance::createCommandBuffers()
 
         commandBuffers[i].bindPipeline(vk::PipelineBindPoint::eCompute, pipeline);
         commandBuffers[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
-        commandBuffers[i].dispatch(255, 255, 0);
+        commandBuffers[i].dispatch(255, 255, 1);
 
         recordImageBarrier(commandBuffers[i], swapChainImages[i],
                            vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR,
@@ -641,7 +669,7 @@ void VulkanInstance::createCommandBuffers()
         subresource.mipLevel = 0;
         copy.srcSubresource = subresource;
         copy.dstSubresource = subresource;
-        
+
         //stai ca cred ca stiu
         recordImageBarrier(commandBuffers[i], swapChainImages[i],
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -726,10 +754,10 @@ void VulkanInstance::cleanupSwapChain()
 void VulkanInstance::render()
 {
     device_.waitForFences(1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-device_.waitIdle();
+    device_.waitIdle();
     uint32_t imageIndex;
     vk::Result result = device_.acquireNextImageKHR(swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
-device_.waitIdle();
+    device_.waitIdle();
     if (result == vk::Result::eErrorOutOfDateKHR)
     {
         recreateSwapChain();
@@ -760,9 +788,9 @@ device_.waitIdle();
     vk::Semaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
-device_.waitIdle();
+    device_.waitIdle();
     device_.resetFences(1, &inFlightFences[currentFrame]);
-device_.waitIdle();
+    device_.waitIdle();
     if (computeQueue.submit(1, &submitInfo, inFlightFences[currentFrame]) != vk::Result::eSuccess)
     {
         throw std::runtime_error("failed to submit draw command buffer!");
@@ -778,9 +806,9 @@ device_.waitIdle();
     presentInfo.pSwapchains = swapChains;
 
     presentInfo.pImageIndices = &imageIndex;
-device_.waitIdle();
+    device_.waitIdle();
     result = presentQueue.presentKHR(&presentInfo); // VK_SUBOPTIMAL_KHR
-device_.waitIdle();
+    device_.waitIdle();
     if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || framebufferResized)
     {
         framebufferResized = false;

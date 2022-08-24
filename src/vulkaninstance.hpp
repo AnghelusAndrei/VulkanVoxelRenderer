@@ -37,6 +37,7 @@ private:
     void createLogicalDevice();
     void createSwapChain();
     void createImageViews();
+    void createBuffer();
     void createDescriptorSetLayout();
     void createComputePipeline();
     void createCommandPool();
@@ -44,7 +45,6 @@ private:
     void createDescriptorSets();
     void createCommandBuffers();
     void createSyncObjects();
-
     void recreateSwapChain();
 private:
     VoxelEngine *engine_;
@@ -116,7 +116,7 @@ private:
 
     vk::CommandPool commandPool;
     std::vector<vk::CommandBuffer> commandBuffers;
-
+    vk::Buffer buffer_;
     std::vector<vk::Semaphore> imageAvailableSemaphores;
     std::vector<vk::Semaphore> renderFinishedSemaphores;
     std::vector<vk::Fence> inFlightFences;

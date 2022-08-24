@@ -17,7 +17,7 @@ file(GLOB SOURCES "src/*.cpp")
 add_executable(${PROJECT_NAME} ${SOURCES})
 
 file(GLOB SHADERS "src/*.comp")
-file(MAKE_DIRECTORY "shaders")
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/shaders")
 
 find_program(GLSLC "glslc")
 add_custom_target(Shaders)
@@ -27,7 +27,7 @@ foreach(shader ${SHADERS})
     if(GLSLC)
     add_custom_command(
         OUTPUT "${CMAKE_BINARY_DIR}/shaders/${shaderfilename}.spv"
-        COMMAND ${GLSLC} ${shader} -g -o "${CMAKE_BINARY_DIR}/shaders/${shaderfilename}.spv"
+        COMMAND ${GLSLC} ${shader} -o "${CMAKE_BINARY_DIR}/shaders/${shaderfilename}.spv"
         DEPENDS ${shader}
     )
     else()
