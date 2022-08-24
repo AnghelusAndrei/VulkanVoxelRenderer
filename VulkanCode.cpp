@@ -1,10 +1,10 @@
 #define GLFW_INCLUDE_VULKAN
-#include 
+#include <GLFW/glfw3.h>
 
-#include 
-#include 
-#include 
-#include 
+#include <cstdint>
+#include <vector>
+#include <optional>
+#include <stdexcept>
 #include 
 #include 
 #include  
@@ -49,8 +49,8 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 }
 
 struct QueueFamilyIndices {
-    std::optional computeFamily; 
-    std::optional presentFamily;
+    std::optional<uint32_t> computeFamily; 
+    std::optional<uint32_t> presentFamily;
 
     bool isComplete() {
         return computeFamily.has_value() && presentFamily.has_value();
@@ -59,8 +59,8 @@ struct QueueFamilyIndices {
 
 struct SwapChainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities;
-    std::vector formats;
-    std::vector presentModes;
+    std::vector<VkSurfaceFormatKHR> formats;
+    std::vector<VkPresentModeKHR>  presentModes;
 };
 
 class HelloTriangleApplication {
@@ -86,13 +86,11 @@ private:
     VkQueue presentQueue;
 
     VkSwapchainKHR swapChain;
-    std::vector swapChainImages;
-    //std::vector renderTargetImages; 
-    std::vector renderTargetImageViews;
+    std::vector<VkImage> swapChainImages;
     VkDeviceMemory renderTargetDeviceMemory;
     VkFormat swapChainImageFormat;
     VkExtent2D swapChainExtent;
-    std::vector swapChainImageViews;
+    std::vector<VkImageView> swapChainImageViews;
 
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
@@ -102,8 +100,8 @@ private:
 
     std::vector imageAvailableSemaphores;
     std::vector renderFinishedSemaphores;
-    std::vector inFlightFences;
-    std::vector imagesInFlight;
+    std::vector<VkFence> inFlightFences;
+    std::vector<VkFence> imagesInFlight;
     size_t currentFrame = 0;
 
     VkDescriptorSetLayout descriptorSetLayout;

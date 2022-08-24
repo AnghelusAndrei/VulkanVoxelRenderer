@@ -44,17 +44,18 @@ private:
     void createDescriptorSets();
     void createCommandBuffers();
     void createSyncObjects();
+
+    void recreateSwapChain();
 private:
     VoxelEngine *engine_;
     struct QueueFamilyIndices
     {
-        std::optional<uint32_t> graphicsFamily;
         std::optional<uint32_t> computeFamily;
         std::optional<uint32_t> presentFamily;
 
         bool isComplete()
         {
-            return graphicsFamily.has_value() && presentFamily.has_value()&&computeFamily.has_value();
+            return presentFamily.has_value()&&computeFamily.has_value();
         }
     };
 
@@ -86,7 +87,6 @@ private:
     #else
         const bool enableValidationLayers = true;
     #endif
-
     vk::Instance instance_;
     vk::DebugUtilsMessengerEXT debug_messenger_;
     vk::SurfaceKHR surface_;
@@ -122,7 +122,7 @@ private:
     std::vector<vk::Fence> inFlightFences;
     std::vector<vk::Fence> imagesInFlight;
     uint32_t currentFrame = 0;
-
+    void cleanupSwapChain();
     bool framebufferResized = false;
 
 

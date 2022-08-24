@@ -1,0 +1,18 @@
+#version 460
+layout(local_size_x = 20, local_size_y = 20) in;
+layout(rgba8ui, binding = 0) uniform writeonly uimage2D destText;
+
+
+void main()
+{
+  uvec4 pixel = uvec4(1.0, 1.0, 1.0, 1.0);
+  // get index in global work group i.e x,y position
+  ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+  
+  //
+  // interesting stuff happens here later
+  //
+  
+  // output to a specific pixel in the image
+  imageStore(destText, pixel_coords, pixel);
+}

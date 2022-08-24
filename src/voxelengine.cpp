@@ -16,10 +16,9 @@ void VoxelEngine::run()
 {
     while (!glfwWindowShouldClose(window_)) {
             glfwPollEvents();
-          //  drawFrame();
+            instance_->render();
         }
-
-        //vkDeviceWaitIdle(device);
+    instance_->device_.waitIdle();
 }
 void VoxelEngine::framebuffer_resized(GLFWwindow* window, int width, int height)
 {

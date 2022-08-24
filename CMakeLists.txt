@@ -27,7 +27,7 @@ foreach(shader ${SHADERS})
     if(GLSLC)
     add_custom_command(
         OUTPUT "${CMAKE_BINARY_DIR}/shaders/${shaderfilename}.spv"
-        COMMAND ${GLSLC} ${shader} -o "${CMAKE_BINARY_DIR}/shaders/${shaderfilename}.spv"
+        COMMAND ${GLSLC} ${shader} -g -o "${CMAKE_BINARY_DIR}/shaders/${shaderfilename}.spv"
         DEPENDS ${shader}
     )
     else()

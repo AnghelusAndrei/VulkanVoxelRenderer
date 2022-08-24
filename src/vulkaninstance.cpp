@@ -115,16 +115,16 @@ void VulkanInstance::createSurface()
     {
         throw EXCEPTION("Failed to create window surface!");
     }
-    LOGGING->verbose() << "Created window surface" << std::endl ;
+    LOGGING->verbose() << "Created window surface" << std::endl;
     surface_ = vk::SurfaceKHR(surface);
 }
 /**
  * @brief Picks the physical device
- * 
+ *
  */
 void VulkanInstance::pickPhysicalDevice() /** @todo Return physical device? **/
 {
-    
+
     std::vector<vk::PhysicalDevice> devices = instance_.enumeratePhysicalDevices();
     if (devices.size() == 0)
         throw EXCEPTION("Failed to find GPUs with Vulkan support");
@@ -152,17 +152,14 @@ VulkanInstance::QueueFamilyIndices VulkanInstance::findQueueFamilies()
     size_t i = 0;
     for (const auto &queueFamily : queueFamilies)
     {
-        if (queueFamily.queueFlags && VK_QUEUE_GRAPHICS_BIT)
-        {
-            indices.graphicsFamily = i;
-        }
+
         if (queueFamily.queueFlags && VK_QUEUE_COMPUTE_BIT)
         {
             indices.computeFamily = i;
         }
 
         vk::Bool32 presentSupport = false;
-        if (physical_device_.getSurfaceSupportKHR(i, surface_))
+        if (physical_device_.getSurfaceSupportKHR(i, surface_) && indices.computeFamily == i)
         {
             indices.presentFamily = i;
         }
@@ -183,7 +180,7 @@ void VulkanInstance::createLogicalDevice()
     QueueFamilyIndices indices = findQueueFamilies();
 
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
-    std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+    std::set<uint32_t> uniqueQueueFamilies = {indices.computeFamily.value(), indices.presentFamily.value()};
 
     float queuePriority = 1.0f;
     for (uint32_t queueFamily : uniqueQueueFamilies)
@@ -218,7 +215,6 @@ void VulkanInstance::createLogicalDevice()
     }
     device_ = physical_device_.createDevice(createInfo);
 
-    device_.getQueue(indices.graphicsFamily.value(), 0, &graphicsQueue);
     device_.getQueue(indices.presentFamily.value(), 0, &presentQueue);
     device_.getQueue(indices.computeFamily.value(), 0, &computeQueue);
 }
@@ -227,24 +223,39 @@ VulkanInstance::SwapChainSupportDetails VulkanInstance::querySwapChainSupport()
 {
     SwapChainSupportDetails details;
 
-    physical_device_.getSurfaceCapabilitiesKHR(surface_, &details.capabilities);
+    if (physical_device_.getSurfaceCapabilitiesKHR(surface_, &details.capabilities) != vk::Result::eSuccess)
+    {
+        throw EXCEPTION("Failed to get surface capabilities");
+    }
 
     uint32_t formatCount;
-    physical_device_.getSurfaceFormatsKHR(surface_, &formatCount, nullptr);
+    if (physical_device_.getSurfaceFormatsKHR(surface_, &formatCount, nullptr) != vk::Result::eSuccess)
+    {
+        throw EXCEPTION("Failed to get surface format");
+    }
 
     if (formatCount != 0)
     {
         details.formats.resize(formatCount);
-        physical_device_.getSurfaceFormatsKHR(surface_, &formatCount, details.formats.data());
+        if (physical_device_.getSurfaceFormatsKHR(surface_, &formatCount, details.formats.data()) != vk::Result::eSuccess)
+        {
+            throw EXCEPTION("Failed to get surface format");
+        }
     }
 
     uint32_t presentModeCount;
-    physical_device_.getSurfacePresentModesKHR(surface_, &presentModeCount, nullptr);
+    if (physical_device_.getSurfacePresentModesKHR(surface_, &presentModeCount, nullptr) != vk::Result::eSuccess)
+    {
+        throw EXCEPTION("Failed to get surface present mode");
+    }
 
     if (presentModeCount != 0)
     {
         details.presentModes.resize(presentModeCount);
-        physical_device_.getSurfacePresentModesKHR(surface_, &presentModeCount, details.presentModes.data());
+        if (physical_device_.getSurfacePresentModesKHR(surface_, &presentModeCount, details.presentModes.data()) != vk::Result::eSuccess)
+        {
+            throw EXCEPTION("Failed to get surface present mode");
+        }
     }
 
     return details;
@@ -325,7 +336,7 @@ void VulkanInstance::createSwapChain()
 
     QueueFamilyIndices indices = findQueueFamilies();
     uint32_t queueFamilyIndices[] = {indices.computeFamily.value(), indices.presentFamily.value()};
-
+    assert(indices.computeFamily==indices.presentFamily);
     if (indices.computeFamily != indices.presentFamily)
     {
         createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
@@ -347,9 +358,7 @@ void VulkanInstance::createSwapChain()
         throw std::runtime_error("failed to create swap chain!");
     }
 
-    device_.getSwapchainImagesKHR(swapChain, &imageCount, nullptr);
-    swapChainImages.resize(imageCount);
-    device_.getSwapchainImagesKHR(swapChain, &imageCount, swapChainImages.data());
+    swapChainImages=device_.getSwapchainImagesKHR(swapChain);
 
     swapChainImageFormat = surfaceFormat.format;
     swapChainExtent = extent;
@@ -561,7 +570,10 @@ void VulkanInstance::createDescriptorSets()
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = 0.0f;
 
-    device_.createSampler(&samplerInfo, nullptr, &imageSampler);
+    if(device_.createSampler(&samplerInfo, nullptr, &imageSampler)!=vk::Result::eSuccess)
+    {
+        throw EXCEPTION("Failed to create the sampler");
+    }
 
     for (size_t i = 0; i < swapChainImages.size(); i++) // eroare pentru andrei aici :)
     {
@@ -629,7 +641,8 @@ void VulkanInstance::createCommandBuffers()
         subresource.mipLevel = 0;
         copy.srcSubresource = subresource;
         copy.dstSubresource = subresource;
-
+        
+        //stai ca cred ca stiu
         recordImageBarrier(commandBuffers[i], swapChainImages[i],
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
@@ -653,7 +666,7 @@ void VulkanInstance::createSyncObjects()
     imageAvailableSemaphores.resize(engine_->config_.MAX_FRAMES_IN_FLIGHT);
     renderFinishedSemaphores.resize(engine_->config_.MAX_FRAMES_IN_FLIGHT);
     inFlightFences.resize(engine_->config_.MAX_FRAMES_IN_FLIGHT);
-    imagesInFlight.resize(swapChainImages.size(), VK_NULL_HANDLE);
+    imagesInFlight.resize(swapChainImages.size(), vk::Fence{});
 
     vk::SemaphoreCreateInfo semaphoreInfo{};
 
@@ -668,4 +681,115 @@ void VulkanInstance::createSyncObjects()
             throw std::runtime_error("failed to create synchronization objects for a frame!");
         }
     }
+}
+
+void VulkanInstance::recreateSwapChain()
+{
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(engine_->window_, &width, &height);
+    while (width == 0 || height == 0)
+    {
+        glfwGetFramebufferSize(engine_->window_, &width, &height);
+        glfwWaitEvents();
+    }
+
+    device_.waitIdle();
+
+    cleanupSwapChain();
+
+    createSwapChain();
+    createImageViews();
+    createDescriptorPool();
+    createDescriptorSets();
+    createComputePipeline();
+    createCommandBuffers();
+}
+void VulkanInstance::cleanupSwapChain()
+{
+    device_.destroySampler(imageSampler, nullptr);
+
+    device_.destroyDescriptorPool(descriptorPool, nullptr);
+
+    device_.freeCommandBuffers(commandPool, commandBuffers);
+
+    device_.destroyPipeline(pipeline, nullptr);
+    device_.destroyPipelineLayout(pipelineLayout, nullptr);
+
+    for (auto imageView : swapChainImageViews)
+    {
+        device_.destroyImageView(imageView, nullptr);
+    }
+
+    device_.destroySwapchainKHR(swapChain, nullptr);
+}
+
+void VulkanInstance::render()
+{
+    device_.waitForFences(1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+device_.waitIdle();
+    uint32_t imageIndex;
+    vk::Result result = device_.acquireNextImageKHR(swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+device_.waitIdle();
+    if (result == vk::Result::eErrorOutOfDateKHR)
+    {
+        recreateSwapChain();
+        return;
+    }
+    else if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR)
+    {
+        throw std::runtime_error("failed to acquire swap chain image!");
+    }
+
+    if (imagesInFlight[imageIndex] != vk::Fence{})
+    {
+        device_.waitForFences(1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+    }
+    imagesInFlight[imageIndex] = inFlightFences[currentFrame];
+    device_.waitIdle();
+    vk::SubmitInfo submitInfo{};
+
+    vk::Semaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]}; // K_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+    vk::PipelineStageFlags waitStages[] = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
+
+    vk::Semaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+device_.waitIdle();
+    device_.resetFences(1, &inFlightFences[currentFrame]);
+device_.waitIdle();
+    if (computeQueue.submit(1, &submitInfo, inFlightFences[currentFrame]) != vk::Result::eSuccess)
+    {
+        throw std::runtime_error("failed to submit draw command buffer!");
+    }
+
+    vk::PresentInfoKHR presentInfo{}; // VK_STRUCTURE_TYPE_PRESENT_INFO_KHR
+
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+
+    vk::SwapchainKHR swapChains[] = {swapChain};
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+
+    presentInfo.pImageIndices = &imageIndex;
+device_.waitIdle();
+    result = presentQueue.presentKHR(&presentInfo); // VK_SUBOPTIMAL_KHR
+device_.waitIdle();
+    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || framebufferResized)
+    {
+        framebufferResized = false;
+        recreateSwapChain();
+    }
+    else if (result != vk::Result::eSuccess)
+    {
+        throw std::runtime_error("failed to present swap chain image!");
+    }
+
+    currentFrame = (currentFrame + 1) % engine_->config_.MAX_FRAMES_IN_FLIGHT;
 }
