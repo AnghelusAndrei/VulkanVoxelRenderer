@@ -6,8 +6,17 @@
 #include <vulkan/vulkan.hpp>
 
 #include <glm/vec4.hpp>
-#define LEAF 0
-#define NODE 1
+
+#include "vulkaninstance.hpp"
+
+
+#define maxDepth 15
+
+enum OctreeEnums{
+    LEAF  = 0,
+    NODE  = 1,
+    VOXEL = 2
+};
 
 typedef struct leaf;
 struct leaf{
@@ -22,11 +31,18 @@ class Octree{
     public:
         Octree(int depth);
 
-        void Insert(glm::uvec4 pos, glm::uvec4 col, unsigned int type);
-        void InsertIfFree();
-        leaf Lookup();
-        void Remove();
+        void Insert(glm::uvec4 pos, glm::uvec4 data, unsigned int type);
+        void Insert(glm::uvec4 pos, glm::uvec4 data, unsigned int type, bool (*typeCondition)(unsigned int));
+        void Remove(glm::uvec4 pos);
+        void Remove(glm::uvec4 pos, bool (*typeCondition)(unsigned int));
+        void Move(glm::uvec4 from, glm::uvec4 to);
+        void Move(glm::uvec4 from, glm::uvec4 to, bool (*typeCondition)(unsigned int));
+        leaf Lookup(glm::uvec4 pos);
+
+        void upload(int error);
     public:
+        vk::Buffer buffer;
+        
         int depth_;
         int n;
         glm::uvec4 * octree;
@@ -34,7 +50,7 @@ class Octree{
 
     private:
         std::stack<int> free_mem;
-        long OCTREE_LENGTH = 0;
+        long OCTREE_MAX_LENGTH = 0;
 
         int Locate(glm::uvec4 pos, int depth, int p2){
             int a=n/p2;
@@ -46,62 +62,3 @@ class Octree{
         }
 
 };
-
-Octree::Octree(int depth){
-    depth_ = depth;
-    n = 1<<depth;
-    int o_m = 8;
-
-    for(int i = 0;i<depth;i++){
-        OCTREE_LENGTH += o_m;
-        o_m *= 8;
-    }
-
-    octree = new glm::uvec4[OCTREE_LENGTH];
-} 
-
-
-void Octree::Insert(glm::uvec4 pos, glm::uvec4 col, unsigned int type){
-    int d=1;
-    int offset = 0;
-    int p2 = 1;
-    int j = 0;
-
-    while(d<depth_){
-        int i = offset+Locate(pos,d,p2);
-
-        switch (octree[i].w)
-        {
-            case LEAF:
-                if(free_mem.empty()){
-                    offset = OCTREE_INDEX;
-                    OCTREE_INDEX+=8;
-                }else{
-                    offset = free_mem.top();
-                    free_mem.pop();
-                }
-                octree[i].x =offset;
-                octree[i].w = NODE;
-                octree[i].z = 0;
-                if(d>1)octree[j].z++;
-                j = i;
-                break;
-            case NODE:
-                j = i;
-                offset = octree[i].y;
-                break;
-        }
-
-        d++;
-        p2*=2;
-    }
-
-    int i = offset+Locate(pos,d,p2);
-    if(octree[i].w <= 1)octree[j].z++;
-    octree[i]={
-        col.x,
-        col.y,
-        col.z,
-        type
-    };
-}

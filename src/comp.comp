@@ -5,9 +5,11 @@ layout(rgba8, binding = 0) uniform writeonly image2D destText;
 
 void main()
 {
-  vec4 pixel = vec4(1.0f, 0.7f, 1.0f, 1.0f);
   // get index in global work group i.e x,y position
   ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+  ivec2 screen_size = imageSize(destText);
+  vec2 screen_coords = vec2(pixel_coords.xy)/vec2(screen_size.xy);
+  vec4 pixel = vec4(1.0f, screen_coords.xy, 1.0f);
   
   //
   // interesting stuff happens here later
