@@ -11,6 +11,16 @@ add_subdirectory(lib/glfw)
 
 add_subdirectory(lib/glm)
 
+if(WIN32)
+    set(cur_dir "C:/VulkanSDK")
+    file(GLOB children RELATIVE ${cur_dir} ${cur_dir}/*)
+    foreach(child ${children})
+        if(IS_DIRECTORY ${cur_dir}/${child})
+            set(ENV{VulkanSDK} ${cur_dir}/${child})
+        endif()
+    endforeach()
+endif()
+
 find_package(Vulkan REQUIRED)
 
 file(GLOB SOURCES "src/*.cpp")

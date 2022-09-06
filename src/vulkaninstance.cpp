@@ -319,8 +319,8 @@ void VulkanInstance::createBuffer(const size_t size)
         1,                                       // Number of queue family indices
         &index                                   // List of queue family indices
     };
-    buffer = device_.createBuffer(bufferCreateInfo);
-    vk::MemoryRequirements bufferMemoryRequirements = device_.getBufferMemoryRequirements(buffer);
+    buffer_ = device_.createBuffer(bufferCreateInfo);
+    vk::MemoryRequirements bufferMemoryRequirements = device_.getBufferMemoryRequirements(buffer_);
     vk::PhysicalDeviceMemoryProperties memoryProperties = physical_device_.getMemoryProperties();
     uint32_t MemoryTypeIndex = uint32_t(~0);
     vk::DeviceSize MemoryHeapSize = uint32_t(~0);

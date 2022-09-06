@@ -11,7 +11,7 @@
 
 typedef struct leaf;
 struct leaf{
-    unsigned int data[4];
+    glm::uvec4 data;
     unsigned int size;
     unsigned int index;
 };
@@ -22,30 +22,30 @@ class Octree{
     public:
         Octree(int depth);
 
-        bool Insert();
-        bool InsertIfFree();
+        void Insert(glm::uvec4 pos, glm::uvec4 col, unsigned int type);
+        void InsertIfFree();
         leaf Lookup();
-        bool Remove();
+        void Remove();
     public:
         int depth_;
         int n;
-        glm::u32vec4 * octree;
+        glm::uvec4 * octree;
         bool upToDate = true;
 
     private:
         std::stack<int> free_mem;
         long OCTREE_LENGTH = 0;
 
-        int Locate(glm::vec3 pos, int depth, int p2){
+        int Locate(glm::uvec4 pos, int depth, int p2){
             int a=n/p2;
             int b=n/(p2*2);
 
-            return (pos.x%a)/b + 
+            return (int)((pos.x%a)/b + 
                 2*((pos.y%a)/b)+
-                4*((pos.z%a)/b);
+                4*((pos.z%a)/b));
         }
 
-}
+};
 
 Octree::Octree(int depth){
     depth_ = depth;
@@ -57,11 +57,11 @@ Octree::Octree(int depth){
         o_m *= 8;
     }
 
-    octree = new glm::uint4[OCTREE_LENGTH];
+    octree = new glm::uvec4[OCTREE_LENGTH];
 } 
 
 
-void Octree::Insert(glm::u32vec4 pos, unsigned char col[4], unsigned int type){
+void Octree::Insert(glm::uvec4 pos, glm::uvec4 col, unsigned int type){
     int d=1;
     int offset = 0;
     int p2 = 1;
@@ -70,7 +70,7 @@ void Octree::Insert(glm::u32vec4 pos, unsigned char col[4], unsigned int type){
     while(d<depth_){
         int i = offset+Locate(pos,d,p2);
 
-        switch (octree[i][3])
+        switch (octree[i].w)
         {
             case LEAF:
                 if(free_mem.empty()){
@@ -80,15 +80,15 @@ void Octree::Insert(glm::u32vec4 pos, unsigned char col[4], unsigned int type){
                     offset = free_mem.top();
                     free_mem.pop();
                 }
-                octree[i][0]=offset;
-                octree[i][3] = NODE;
-                octree[i][2] = 0;
-                if(d>1)octree[j][2]++;
+                octree[i].x =offset;
+                octree[i].w = NODE;
+                octree[i].z = 0;
+                if(d>1)octree[j].z++;
                 j = i;
                 break;
             case NODE:
                 j = i;
-                offset = octree[i][1];
+                offset = octree[i].y;
                 break;
         }
 
@@ -97,11 +97,11 @@ void Octree::Insert(glm::u32vec4 pos, unsigned char col[4], unsigned int type){
     }
 
     int i = offset+Locate(pos,d,p2);
-    if(octree[i][3] <= 1)octree[j][2]++;
+    if(octree[i].w <= 1)octree[j].z++;
     octree[i]={
-        (unsigned int)col[0],
-        (unsigned int)col[1],
-        (unsigned int)col[2],
+        col.x,
+        col.y,
+        col.z,
         type
     };
 }

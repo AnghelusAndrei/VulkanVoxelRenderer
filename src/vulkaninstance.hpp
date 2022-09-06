@@ -37,7 +37,6 @@ private:
     void createLogicalDevice();
     void createSwapChain();
     void createImageViews();
-    void createBuffer();
     void createDescriptorSetLayout();
     void createComputePipeline();
     void createCommandPool();
@@ -46,6 +45,8 @@ private:
     void createCommandBuffers();
     void createSyncObjects();
     void recreateSwapChain();
+
+    void createBuffer(const size_t size);
 private:
     VoxelEngine *engine_;
     struct QueueFamilyIndices
