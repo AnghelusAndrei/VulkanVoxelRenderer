@@ -1,13 +1,23 @@
 #version 460
 layout(local_size_x = 20, local_size_y = 20) in;
+
+layout(constant_id=0) const uint screen_width = 800;
+layout(constant_id=1) const uint screen_height = 600;
+const uvec2 screen_size=uvec2(screen_width, screen_height);
 layout(rgba8, binding = 0) uniform writeonly image2D destText;
 
 
+float rand(vec2 co){
+    return fract(sin(dot(co, vec2(12.7898, 78.233))) * 43758.5453);
+}
+
 void main()
 {
-  vec4 pixel = vec4(1.0f, 0.7f, 1.0f, 1.0f);
+
   // get index in global work group i.e x,y position
   ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+  vec4 pixel = vec4(pixel_coords.x/800.0f, pixel_coords.y/600.0f, rand(pixel_coords), 1.0f);
+
   
   //
   // interesting stuff happens here later

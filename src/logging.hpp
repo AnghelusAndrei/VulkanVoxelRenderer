@@ -5,7 +5,9 @@
 #include <ostream>
 #include <stdexcept>
 
-#define EXCEPTION(x) (Logging::instance()->exception(x))
+#include <vulkan/vulkan.hpp>
+
+#define EXCEPTION(...) (Logging::instance()->exception(__VA_ARGS__))
 #define LOGGING (Logging::instance())
 
 enum LoggingLevel
@@ -53,11 +55,18 @@ public:
     {
         return getStream(level);
     }
+    std::runtime_error exception(std::string what, VkResult result)
+    {
+        return std::runtime_error("[EXCEPTION] " + what +" " + std::to_string(result));
+    }
+    std::runtime_error exception(std::string what, vk::Result result)
+    {
+        return std::runtime_error("[EXCEPTION] " + what +" "+ std::to_string(static_cast<VkResult>(result)));
+    }
     std::runtime_error exception(std::string what)
     {
         return std::runtime_error("[EXCEPTION] " + what);
     }
-
 
 private:
     class VoidBuffer: public std::streambuf 

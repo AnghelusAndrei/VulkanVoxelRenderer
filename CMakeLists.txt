@@ -10,8 +10,8 @@ set(BUILD_SHARED_LIBS 1)
 add_subdirectory(lib/glfw)
 
 add_subdirectory(lib/glm)
-
 find_package(Vulkan REQUIRED)
+add_subdirectory(lib/VulkanMemoryAllocator)
 
 file(GLOB SOURCES "src/*.cpp")
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -48,5 +48,6 @@ endforeach()
 
 target_include_directories(${PROJECT_NAME} PUBLIC lib/glfw/include)
 target_include_directories(${PROJECT_NAME} PUBLIC lib/glm)
-target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan glfw glm)
+target_include_directories(${PROJECT_NAME} PUBLIC lib/VulkanMemoryAllocator/include)
+target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan glfw glm VulkanMemoryAllocator)
 add_dependencies(${PROJECT_NAME} Shaders)
