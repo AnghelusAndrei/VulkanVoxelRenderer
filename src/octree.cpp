@@ -18,8 +18,9 @@ Octree::Octree(int depth){
     octree = new glm::uvec4[OCTREE_MAX_LENGTH];
 } 
 
-void Octree::upload(int error){
+void Octree::upload(){
     if(upToDate)return;
+    upToDate = false;
 
     //
     // interesting vkMemoryAllocator stuff happens here later

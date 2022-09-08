@@ -15,9 +15,16 @@
 #include <map>
 
 #include <vulkan/vulkan.hpp>
+#include <vk_mem_alloc.h>
+#include <glm/vec2.hpp>
 
 #include "voxelengine.hpp"
 #include "logging.hpp"
+
+struct Buffer {
+    VmaAllocation allocation;
+    vk::Buffer buffer;
+};
 
 class VoxelEngine;
 class VulkanInstance
@@ -37,6 +44,7 @@ private:
     void createLogicalDevice();
     void createSwapChain();
     void createImageViews();
+    void createBuffer();
     void createDescriptorSetLayout();
     void createComputePipeline();
     void createCommandPool();
@@ -45,10 +53,12 @@ private:
     void createCommandBuffers();
     void createSyncObjects();
     void recreateSwapChain();
-
-    void createBuffer(const size_t size);
 private:
+    VmaAllocator allocator_;
+    
     VoxelEngine *engine_;
+    Buffer staging_buffer_;
+    Buffer local_buffer_;
     struct QueueFamilyIndices
     {
         std::optional<uint32_t> computeFamily;
@@ -130,5 +140,3 @@ private:
 
     friend class VoxelEngine;
 };
-
-

@@ -15,7 +15,6 @@
 enum OctreeEnums{
     LEAF  = 0,
     NODE  = 1,
-    VOXEL = 2
 };
 
 typedef struct leaf;
@@ -39,9 +38,8 @@ class Octree{
         void Move(glm::uvec4 from, glm::uvec4 to, bool (*typeCondition)(unsigned int));
         leaf Lookup(glm::uvec4 pos);
 
-        void upload(int error);
+        void upload();
     public:
-        vk::Buffer buffer;
         
         int depth_;
         int n;
