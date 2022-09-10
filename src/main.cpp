@@ -7,8 +7,7 @@ int main()
         800,
         600,
         "VULKAN",
-        true,
-        2
+        true
     };
     VoxelEngine engine(config);
     engine.run();

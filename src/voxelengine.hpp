@@ -5,6 +5,7 @@
 
 #include "config.hpp"
 #include "vulkaninstance.hpp"
+#include "../usr/usr.hpp"
 
 class VulkanInstance;
 class VoxelEngine

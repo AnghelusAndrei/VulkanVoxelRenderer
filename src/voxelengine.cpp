@@ -2,6 +2,7 @@
 
 VoxelEngine::VoxelEngine(Config config) : config_(config)
 {
+
     glfwInit();
     // We specify the window hint in order for GLFW to not
     // create by default a OpenGL context

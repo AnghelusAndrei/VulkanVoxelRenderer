@@ -35,7 +35,6 @@ public:
     void render();
     ~VulkanInstance();
 
-public:
 private:
     void createInstance();
     void createSurface();

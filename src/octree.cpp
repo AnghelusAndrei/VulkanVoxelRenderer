@@ -27,14 +27,14 @@ void Octree::upload(){
     //
 }
 
-void Octree::Insert(glm::uvec4 pos, glm::uvec4 data, unsigned int type){
-    int d=1;
+void Octree::Insert(glm::uvec4 pos, glm::uvec4 data, uint32_t type){
+    uint32_t d=1;
     int offset = 0;
     int p2 = 1;
     int j = 0;
 
     while(d<depth_){
-        int i = offset+Locate(pos,d,p2);
+        uint32_t i = offset+Locate(pos,d,p2);
 
         switch (octree[i].w)
         {
@@ -63,7 +63,7 @@ void Octree::Insert(glm::uvec4 pos, glm::uvec4 data, unsigned int type){
         p2*=2;
     }
 
-    int i = offset+Locate(pos,d,p2);
+    uint32_t i = offset+Locate(pos,d,p2);
     if(octree[i].w <= 1)octree[j].z++;
     octree[i]={
         data.x,
@@ -74,15 +74,15 @@ void Octree::Insert(glm::uvec4 pos, glm::uvec4 data, unsigned int type){
     upToDate = false;
 }
 
-void Octree::Insert(glm::uvec4 pos, glm::uvec4 data, unsigned int type, bool (*typeCondition)(unsigned int)){
-    int d=1;
+void Octree::Insert(glm::uvec4 pos, glm::uvec4 data, uint32_t type, bool (*typeCondition)(uint32_t)){
+    uint32_t d=1;
     int offset = 0;
     int p2 = 1;
     int j = 0;
     std::stack<int> nodes;
 
     while(d<depth_){
-        int i = offset+Locate(pos,d,p2);
+        uint32_t i = offset+Locate(pos,d,p2);
 
         switch (octree[i].w)
         {
@@ -112,7 +112,7 @@ void Octree::Insert(glm::uvec4 pos, glm::uvec4 data, unsigned int type, bool (*t
         p2*=2;
     }
 
-    int i = offset+Locate(pos,d,p2);
+    uint32_t i = offset+Locate(pos,d,p2);
     if(typeCondition(octree[j].w)){
         if(octree[i].w <= 1)octree[j].z++;
         octree[i]={
@@ -135,13 +135,13 @@ void Octree::Insert(glm::uvec4 pos, glm::uvec4 data, unsigned int type, bool (*t
 }
 
 void Octree::Remove(glm::uvec4 pos){
-    int d=1;
+    uint32_t d=1;
     int offset = 0;
     int p2=1;
     std::stack<int> nodes;
 
     while(d<=depth_){
-        int i = offset+Locate(pos,d,p2);
+        uint32_t i = offset+Locate(pos,d,p2);
 
         switch (octree[i].w)
         {
@@ -172,14 +172,14 @@ void Octree::Remove(glm::uvec4 pos){
 
 }
 
-void Octree::Remove(glm::uvec4 pos, bool (*typeCondition)(unsigned int)){
-    int d=1;
+void Octree::Remove(glm::uvec4 pos, bool (*typeCondition)(uint32_t)){
+    uint32_t d=1;
     int offset = 0;
     int p2=1;
     std::stack<int> nodes;
 
     while(d<=depth_){
-        int i = offset+Locate(pos,d,p2);
+        uint32_t i = offset+Locate(pos,d,p2);
 
         switch (octree[i].w)
         {
@@ -213,30 +213,30 @@ void Octree::Remove(glm::uvec4 pos, bool (*typeCondition)(unsigned int)){
 }
 
 leaf Octree::Lookup(glm::uvec4 pos){
-    int d=1;
+    uint32_t d=1;
     int offset = 0;
     int p2=1;
+    leaf l;
+
     while(d<=depth_){
-        int i = offset+Locate(pos,d,p2);
+        uint32_t i = offset+Locate(pos,d,p2);
         int s = n/(p2*2);
 
         switch (octree[i].w)
         {
         case LEAF:
-            return (leaf){
-                (glm::uvec4){(pos.x/s)*s,(pos.y/s)*s,(pos.z/s)*s, octree[i].w},
-                (uint){s},
-                i
-            };
+            l.data = (glm::uvec4){(pos.x/s)*s,(pos.y/s)*s,(pos.z/s)*s, octree[i].w};
+            l.size = s;
+            l.index = i;
+            return l;
         case NODE:
             offset = octree[i].x;
             break;
         default:
-            return (leaf){
-                octree[i],
-                (uint){1},
-                i
-            };
+            l.data = octree[i];
+            l.size = 1;
+            l.index = i;
+            return l;
         }
 
         d++;
