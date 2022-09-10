@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.3)
 project(VulkanVoxelRenderer) 
-set(CXX_STANDARD 11)
+set(CXX_STANDARD 17)
 if ( ${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR} )
     message( FATAL_ERROR "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there. You may need to remove CMakeCache.txt." )
 endif()
@@ -53,8 +53,6 @@ foreach(shader ${SHADERS})
     add_dependencies(Shaders ${shaderfilename}) 
 
 endforeach()
-
-
 
 
 target_include_directories(${PROJECT_NAME} PUBLIC lib/glfw/include)
