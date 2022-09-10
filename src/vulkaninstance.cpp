@@ -8,24 +8,130 @@ VulkanInstance::VulkanInstance(VoxelEngine *engine) : engine_(engine)
     pickPhysicalDevice();
     createLogicalDevice();
 
-    VmaAllocatorCreateInfo allocator_create_info{};
-    allocator_create_info.vulkanApiVersion = VK_API_VERSION_1_0;
-    allocator_create_info.physicalDevice = static_cast<VkPhysicalDevice>(physical_device_);
-    allocator_create_info.device = static_cast<VkDevice>(device_);
-    allocator_create_info.instance = static_cast<VkInstance>(instance_);
-    vmaCreateAllocator(&allocator_create_info, &allocator_);
-    createBuffer();
-    createSwapChain();
-    createImageViews();
-    createDescriptorSetLayout();
+    createResources();
+    // createFrameResources();
+    // createPipelines();
+
     createComputePipeline();
-    createCommandPool();
+
     createDescriptorPool();
     createDescriptorSets();
     createCommandBuffers();
     createSyncObjects();
 }
 
+void VulkanInstance::createResources()
+{
+    VkResult result;
+    QueueFamilyIndices queueFamilyIndices = findQueueFamilies();
+
+    VkSurfaceKHR surface;
+    VkResult result;
+    if ((result = glfwCreateWindowSurface(base.instance, engine_->window_, nullptr, &surface)) != VK_SUCCESS)
+    {
+        throw EXCEPTION("Failed to create window surface!", result);
+    }
+    LOGGING->verbose() << "Created window surface" << std::endl;
+    base.surface = vk::SurfaceKHR(surface);
+
+    VmaAllocatorCreateInfo allocator_create_info{};
+    allocator_create_info.vulkanApiVersion = VK_API_VERSION_1_1;
+    allocator_create_info.physicalDevice = static_cast<VkPhysicalDevice>(base.physicalDevice);
+    allocator_create_info.device = static_cast<VkDevice>(base.device);
+    allocator_create_info.instance = static_cast<VkInstance>(base.instance);
+    if ((result = vmaCreateAllocator(&allocator_create_info, &allocator_)) != VK_SUCCESS)
+        throw EXCEPTION("Failed to create allocator", result);
+
+    vk::CommandPoolCreateInfo poolInfo{};
+    poolInfo.queueFamilyIndex = queueFamilyIndices.computeFamily.value();
+
+    if (base.device.createCommandPool(&poolInfo, nullptr, &base.commandPool) != vk::Result::eSuccess)
+    {
+        throw std::runtime_error("failed to create command pool!");
+    }
+    {
+        std::vector<vk::DescriptorPoolSize> pool_sizes;
+        pool_sizes.push_back(vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, static_cast<uint32_t>(swapChainImages.size())});
+        pool_sizes.push_back(vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, static_cast<uint32_t>(swapChainImages.size())});
+
+        vk::DescriptorPoolCreateInfo poolCreateInfo{};
+        poolCreateInfo.poolSizeCount = pool_sizes.size();
+        poolCreateInfo.pPoolSizes = pool_sizes.data();
+        poolCreateInfo.maxSets = static_cast<uint32_t>(swapChainImages.size());
+        if (base.device.createDescriptorPool(&poolCreateInfo, nullptr, &base.descriptorPools[0]) != vk::Result::eSuccess)
+        {
+            throw EXCEPTION("Failed to create descriptor pool");
+        }
+    }
+    {
+        std::vector<vk::DescriptorPoolSize> pool_sizes;
+        pool_sizes.push_back(vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, static_cast<uint32_t>(swapChainImages.size())});
+        pool_sizes.push_back(vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, static_cast<uint32_t>(swapChainImages.size())});
+
+        vk::DescriptorPoolCreateInfo poolCreateInfo{};
+        poolCreateInfo.poolSizeCount = pool_sizes.size();
+        poolCreateInfo.pPoolSizes = pool_sizes.data();
+        poolCreateInfo.maxSets = static_cast<uint32_t>(swapChainImages.size());
+        if (base.device.createDescriptorPool(&poolCreateInfo, nullptr, &base.descriptorPools[1]) != vk::Result::eSuccess)
+        {
+            throw EXCEPTION("Failed to create descriptor pool");
+        }
+    }
+    {
+        std::vector<vk::DescriptorPoolSize> pool_sizes;
+        pool_sizes.push_back(vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, static_cast<uint32_t>(swapChainImages.size())});
+        pool_sizes.push_back(vk::DescriptorPoolSize{vk::DescriptorType::eStorageImage, static_cast<uint32_t>(swapChainImages.size())});
+
+        vk::DescriptorPoolCreateInfo poolCreateInfo{};
+        poolCreateInfo.poolSizeCount = pool_sizes.size();
+        poolCreateInfo.pPoolSizes = pool_sizes.data();
+        poolCreateInfo.maxSets = static_cast<uint32_t>(swapChainImages.size());
+        if (base.device.createDescriptorPool(&poolCreateInfo, nullptr, &base.descriptorPools[2]) != vk::Result::eSuccess)
+        {
+            throw EXCEPTION("Failed to create descriptor pool");
+        }
+    }
+    
+    vk::BufferCreateInfo buffer_create_info{};
+    VmaAllocationCreateInfo allocation_info{};
+
+    buffer_create_info.size = 65536;
+    buffer_create_info.usage = vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc;
+    allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
+    allocation_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+       
+    if ((result = vmaCreateBuffer(allocator_, reinterpret_cast<VkBufferCreateInfo *>(&buffer_create_info), &allocation_info, reinterpret_cast<VkBuffer *>(&base.stagingBuffer.buffer), &base.stagingBuffer.allocation, nullptr)) != VK_SUCCESS)
+        throw EXCEPTION("Failed to create staging buffer", result);
+    
+    buffer_create_info.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer;
+    allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
+    allocation_info.flags = 0;
+    allocation_info.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    
+    if ((result = vmaCreateBuffer(allocator_, reinterpret_cast<VkBufferCreateInfo *>(&buffer_create_info), &allocation_info, reinterpret_cast<VkBuffer *>(&base.octreeBuffer.buffer), &base.octreeBuffer.allocation, nullptr)) != VK_SUCCESS)
+        throw EXCEPTION("Failed to create octree buffer", result);
+
+    buffer_create_info.usage =  vk::BufferUsageFlagBits::eStorageBuffer;
+    allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
+    allocation_info.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    if ((result = vmaCreateBuffer(allocator_, reinterpret_cast<VkBufferCreateInfo *>(&buffer_create_info), &allocation_info, reinterpret_cast<VkBuffer *>(&base.screenBuffer.buffer), &base.screenBuffer.allocation, nullptr)) != VK_SUCCESS)
+        throw EXCEPTION("Failed to create voxel screen buffer", result);
+
+    buffer_create_info.usage =  vk::BufferUsageFlagBits::eStorageBuffer;
+    allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
+    allocation_info.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    if ((result = vmaCreateBuffer(allocator_, reinterpret_cast<VkBufferCreateInfo *>(&buffer_create_info), &allocation_info, reinterpret_cast<VkBuffer *>(&base.voxelApparitionBuffer.buffer), &base.voxelApparitionBuffer.allocation, nullptr)) != VK_SUCCESS)
+        throw EXCEPTION("Failed to create voxel presence buffer", result);
+
+    buffer_create_info.usage =  vk::BufferUsageFlagBits::eStorageBuffer;
+    allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
+    allocation_info.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    if ((result = vmaCreateBuffer(allocator_, reinterpret_cast<VkBufferCreateInfo *>(&buffer_create_info), &allocation_info, reinterpret_cast<VkBuffer *>(&base.voxelIlluminationBuffer.buffer), &base.voxelIlluminationBuffer.allocation, nullptr)) != VK_SUCCESS)
+        throw EXCEPTION("Failed to create voxel illumination buffer", result);
+}
+void VulkanInstance::createFrameResources()
+{
+}
 VulkanInstance::~VulkanInstance()
 {
     // cleanupSwapChain();
@@ -119,14 +225,6 @@ void VulkanInstance::createInstance()
  */
 void VulkanInstance::createSurface()
 {
-    VkSurfaceKHR surface;
-    VkResult result;
-    if ((result=glfwCreateWindowSurface(instance_, engine_->window_, nullptr, &surface)) != VK_SUCCESS)
-    {
-        throw EXCEPTION("Failed to create window surface!", result);
-    }
-    LOGGING->verbose() << "Created window surface" << std::endl;
-    surface_ = vk::SurfaceKHR(surface);
 }
 /**
  * @brief Picks the physical device
@@ -233,15 +331,15 @@ VulkanInstance::SwapChainSupportDetails VulkanInstance::querySwapChainSupport()
 {
     SwapChainSupportDetails details;
     vk::Result result;
-    if ((result=physical_device_.getSurfaceCapabilitiesKHR(surface_, &details.capabilities)) != vk::Result::eSuccess)
+    if ((result = physical_device_.getSurfaceCapabilitiesKHR(surface_, &details.capabilities)) != vk::Result::eSuccess)
     {
-        throw EXCEPTION("Failed to get surface capabilities",result);
+        throw EXCEPTION("Failed to get surface capabilities", result);
     }
 
     uint32_t formatCount;
-    if ((result=physical_device_.getSurfaceFormatsKHR(surface_, &formatCount, nullptr)) != vk::Result::eSuccess)
+    if ((result = physical_device_.getSurfaceFormatsKHR(surface_, &formatCount, nullptr)) != vk::Result::eSuccess)
     {
-        throw EXCEPTION("Failed to get surface format",result);
+        throw EXCEPTION("Failed to get surface format", result);
     }
 
     if (formatCount != 0)
@@ -667,12 +765,12 @@ void VulkanInstance::createBuffer()
     allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
     allocation_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
     VkResult result;
-    if((result=vmaCreateBuffer(allocator_, reinterpret_cast<VkBufferCreateInfo *>(&buffer_create_info), &allocation_info, reinterpret_cast<VkBuffer *>(&staging_buffer_.buffer), &staging_buffer_.allocation, nullptr))!=VK_SUCCESS)
+    if ((result = vmaCreateBuffer(allocator_, reinterpret_cast<VkBufferCreateInfo *>(&buffer_create_info), &allocation_info, reinterpret_cast<VkBuffer *>(&staging_buffer_.buffer), &staging_buffer_.allocation, nullptr)) != VK_SUCCESS)
         throw EXCEPTION("Failed to create staging buffer", result);
     buffer_create_info.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer;
     allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
-    allocation_info.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    if((result=vmaCreateBuffer(allocator_, reinterpret_cast<VkBufferCreateInfo *>(&buffer_create_info), &allocation_info, reinterpret_cast<VkBuffer *>(&local_buffer_.buffer), &local_buffer_.allocation, nullptr))!=VK_SUCCESS)
+    allocation_info.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    if ((result = vmaCreateBuffer(allocator_, reinterpret_cast<VkBufferCreateInfo *>(&buffer_create_info), &allocation_info, reinterpret_cast<VkBuffer *>(&local_buffer_.buffer), &local_buffer_.allocation, nullptr)) != VK_SUCCESS)
         throw EXCEPTION("Failed to create local buffer", result);
 }
 void VulkanInstance::createSyncObjects()

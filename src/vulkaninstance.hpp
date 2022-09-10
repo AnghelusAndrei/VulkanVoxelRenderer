@@ -21,7 +21,8 @@
 #include "voxelengine.hpp"
 #include "logging.hpp"
 
-struct Buffer {
+struct Buffer
+{
     VmaAllocation allocation;
     vk::Buffer buffer;
 };
@@ -35,13 +36,13 @@ public:
     ~VulkanInstance();
 
 public:
-    
-
 private:
     void createInstance();
-    void createSurface();
     void pickPhysicalDevice();
     void createLogicalDevice();
+    void createResources();
+    void createFrameResources();
+    void createSurface();
     void createSwapChain();
     void createImageViews();
     void createBuffer();
@@ -53,9 +54,10 @@ private:
     void createCommandBuffers();
     void createSyncObjects();
     void recreateSwapChain();
+
 private:
     VmaAllocator allocator_;
-    
+
     VoxelEngine *engine_;
     Buffer staging_buffer_;
     Buffer local_buffer_;
@@ -66,7 +68,7 @@ private:
 
         bool isComplete()
         {
-            return presentFamily.has_value()&&computeFamily.has_value();
+            return presentFamily.has_value() && computeFamily.has_value();
         }
     };
 
@@ -79,13 +81,13 @@ private:
 
     QueueFamilyIndices findQueueFamilies();
     SwapChainSupportDetails querySwapChainSupport();
-    vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
-    vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);
-    vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
+    vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR> &availableFormats);
+    vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> &availablePresentModes);
+    vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR &capabilities);
     void recordImageBarrier(vk::CommandBuffer buffer, vk::Image image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
-    vk::AccessFlags scrAccess, vk::AccessFlags dstAccess, vk::PipelineStageFlags srcBind, vk::PipelineStageFlags dstBind);
-    vk::ShaderModule createShaderModule(const std::vector<char>& code);
-    static std::vector<char> readFile(const std::string& filename);
+                            vk::AccessFlags scrAccess, vk::AccessFlags dstAccess, vk::PipelineStageFlags srcBind, vk::PipelineStageFlags dstBind);
+    vk::ShaderModule createShaderModule(const std::vector<char> &code);
+    static std::vector<char> readFile(const std::string &filename);
 
     const std::vector<const char *> validationLayers = {
         "VK_LAYER_KHRONOS_validation"};
@@ -93,39 +95,22 @@ private:
     const std::vector<const char *> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
-    #ifdef NDEBUG
-        const bool enableValidationLayers = false;
-    #else
-        const bool enableValidationLayers = true;
-    #endif
-    vk::Instance instance_;
-    vk::DebugUtilsMessengerEXT debug_messenger_;
-    vk::SurfaceKHR surface_;
-    vk::DispatchLoaderDynamic dldy_;
-    vk::PhysicalDevice physical_device_;
-    vk::Device device_;
-    vk::DescriptorSetLayout descriptorSetLayout;
-    vk::DescriptorPool descriptorPool;
-    std::vector<vk::DescriptorSet> descriptorSets;
-    vk::Sampler imageSampler;
-    vk::Pipeline pipeline;
-
-    vk::Queue graphicsQueue;
-    vk::Queue presentQueue;
-    vk::Queue computeQueue;
+#ifdef NDEBUG
+    const bool enableValidationLayers = false;
+#else
+    const bool enableValidationLayers = true;
+#endif
+    
 
     vk::SwapchainKHR swapChain;
     std::vector<vk::Image> swapChainImages;
     vk::Format swapChainImageFormat;
     vk::Extent2D swapChainExtent;
     std::vector<vk::ImageView> swapChainImageViews;
-    std::vector<vk::Framebuffer> swapChainFramebuffers;
 
-    vk::RenderPass renderPass;
     vk::PipelineLayout pipelineLayout;
     vk::Pipeline graphicsPipeline;
 
-    vk::CommandPool commandPool;
     std::vector<vk::CommandBuffer> commandBuffers;
     vk::Buffer buffer_;
     std::vector<vk::Semaphore> imageAvailableSemaphores;
@@ -135,10 +120,50 @@ private:
     uint32_t currentFrame = 0;
     void cleanupSwapChain();
     bool framebufferResized = false;
+    static const uint32_t maxFrames = 2;
+    struct VulkanBase
+    {
+        vk::Instance instance;
+        vk::DispatchLoaderDynamic dispatch;
+        vk::DebugUtilsMessengerEXT debugMessenger;
+        vk::PhysicalDevice physicalDevice;
+        vk::Device device;
+        vk::SurfaceKHR surface;
+        vk::SwapchainKHR swapchain;
+        vk::Queue presentQueue;
+        vk::Queue computeQueue;
+
+        vk::Pipeline pipelines[3];
+        vk::CommandPool commandPool;
+        vk::DescriptorPool descriptorPools[3];
+        Buffer stagingBuffer;
+        Buffer octreeBuffer;
+        Buffer screenBuffer;
+        Buffer voxelApparitionBuffer;
+        Buffer voxelIlluminationBuffer;
+    } base;
+
+    
+    struct FrameResources
+    {
+        vk::Image image;
+        vk::ImageView imageView;
+        vk::DescriptorSet descriptorSets[3];
+
+        vk::CommandBuffer commandBuffer;
+        vk::CommandBuffer copyCommandBuffer;
+        // Synchronization
+        vk::Semaphore imageAvailable;
+        vk::Fence inFlight;
+        vk::Fence imageInFlight;
+        vk::Semaphore imageRenderFinished;
+    } frameResources[maxFrames];
 
 
-
+    /**
+     *  OCTREE BUFFER -> FIRST STEP -> VOXEL BUFFER; SCREEN BUFFER -> SECOND STEP -> THIRD STEP 
+     * 
+     * 
+     */
     friend class VoxelEngine;
 };
-
-
