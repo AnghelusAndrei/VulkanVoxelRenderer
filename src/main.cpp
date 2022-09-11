@@ -3,12 +3,6 @@
 
 int main()
 {
-    Config config { 
-        800,
-        600,
-        "VULKAN",
-        true
-    };
-    VoxelEngine engine(config);
+    VoxelEngine engine;
     engine.run();
 }

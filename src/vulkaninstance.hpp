@@ -13,13 +13,23 @@
 #include <set>
 #include <array>
 #include <map>
+#include <stack>
 
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.h>
+#include <glm/vec4.hpp>
+#include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
+#include <glm/geometric.hpp>
+#include <glm/gtx/euler_angles.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 
 #include "voxelengine.hpp"
 #include "logging.hpp"
+#include "octree.hpp"
+#include "camera.hpp"
+
+#include "usr.hpp"
 
 struct Buffer
 {
@@ -42,6 +52,7 @@ private:
     void createLogicalDevice();
     void createSwapChain();
     void createImageViews();
+    void setupVma();
     void createBuffer();
     void createDescriptorSetLayout();
     void createComputePipeline();
@@ -52,10 +63,24 @@ private:
     void createSyncObjects();
     void recreateSwapChain();
 
+public:
+    struct Stats{
+        double FPS;
+        double MS;
+
+        double time1, time2 = glfwGetTime();
+        void Update(){
+            time1 = time2;
+            time2 = glfwGetTime();
+
+            MS = time2-time1;
+            FPS = 1000/MS;
+        }
+    } stats;
 private:
+    VoxelEngine *engine_;
     VmaAllocator allocator_;
 
-    VoxelEngine *engine_;
     Buffer staging_buffer_;
     Buffer local_buffer_;
     struct QueueFamilyIndices
@@ -126,6 +151,7 @@ private:
         vk::PhysicalDevice physicalDevice;
         vk::Device device;
         vk::SurfaceKHR surface;
+        vk::Sampler imageSampler;
         vk::SwapchainKHR swapchain;
         vk::Queue presentQueue;
         vk::Queue computeQueue;
@@ -150,7 +176,6 @@ private:
         vk::Fence imageInFlight;
         vk::Semaphore imageRenderFinished;
     } frameResources[maxFrames];
-
 
     /**
      *  OCTREE BUFFER -> FIRST STEP -> VOXEL BUFFER; SCREEN BUFFER -> SECOND STEP -> THIRD STEP 

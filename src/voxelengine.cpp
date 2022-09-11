@@ -1,14 +1,15 @@
 #include "voxelengine.hpp"
 
-VoxelEngine::VoxelEngine(Config config) : config_(config)
+VoxelEngine::VoxelEngine()
 {
-
     glfwInit();
     // We specify the window hint in order for GLFW to not
     // create by default a OpenGL context
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-    window_ = glfwCreateWindow(config_.window_width, config_.window_height, config.window_title.c_str(), nullptr, nullptr);
+    User = usr(this);
+
+    window_ = glfwCreateWindow(config_.window_width, config_.window_height, config_.window_title.c_str(), nullptr, nullptr);
     glfwSetWindowUserPointer(window_, this);
     glfwSetFramebufferSizeCallback(window_, framebuffer_resized);
     instance_ = new VulkanInstance(this);
@@ -16,10 +17,17 @@ VoxelEngine::VoxelEngine(Config config) : config_(config)
 void VoxelEngine::run()
 {
     while (!glfwWindowShouldClose(window_)) {
+
             glfwPollEvents();
             instance_->render();
+
+            /** @todo multithreading Scene and Interactive **/
+            User.Interactive();
+            User.Scene();
+
+            instance_->stats.Update();
         }
-    instance_->device_.waitIdle();
+    instance_->base.device.waitIdle();
 }
 void VoxelEngine::framebuffer_resized(GLFWwindow* window, int width, int height)
 {

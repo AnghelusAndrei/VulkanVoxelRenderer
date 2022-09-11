@@ -1,13 +1,6 @@
 #ifndef OCTREE_HPP
 #define OCTREE_HPP 1
 
-#include <stack>
-
-#include <GLFW/glfw3.h>
-#include <vulkan/vulkan.hpp>
-
-#include <glm/vec4.hpp>
-
 #include "vulkaninstance.hpp"
 
 
@@ -24,6 +17,7 @@ uint64_t OCTREE_INDEX = 8;
 
 class Octree{
     public:
+        Octree();
         Octree(int depth);
 
         void Insert(glm::uvec4 pos, glm::uvec4 data, uint32_t type);
