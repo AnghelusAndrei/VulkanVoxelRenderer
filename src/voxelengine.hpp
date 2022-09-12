@@ -1,23 +1,9 @@
 #pragma once
 
 #include <GLFW/glfw3.h>
-#include <vulkan/vulkan.hpp>
-
+#include "config.hpp"
+#include "stats.hpp"
 #include "vulkaninstance.hpp"
-
-struct Stats{
-    double FPS;
-    double MS;
-
-    double time1, time2 = glfwGetTime();
-    void Update(){
-        time1 = time2;
-        time2 = glfwGetTime();
-
-        MS = time2-time1;
-        FPS = 1000/MS;
-    }
-};
 
 class Octree;
 class Camera;
@@ -44,6 +30,7 @@ public:
 
 private:
     VulkanInstance *instance_;
+    uint8_t maxThreads;
 
     static void framebuffer_resized(GLFWwindow *window_, int width, int height);
     friend class VulkanInstance;

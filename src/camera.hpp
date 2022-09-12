@@ -1,5 +1,5 @@
 #ifndef CAMERA_HPP
-#define CAMERA_HPP 1
+#define CAMERA_HPP
 
 #include "vulkaninstance.hpp"
 

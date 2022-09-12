@@ -1,5 +1,5 @@
 #ifndef OCTREE_HPP
-#define OCTREE_HPP 1
+#define OCTREE_HPP
 
 #include "vulkaninstance.hpp"
 

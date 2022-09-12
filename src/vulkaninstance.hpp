@@ -14,6 +14,8 @@
 #include <array>
 #include <map>
 #include <stack>
+#include <thread>
+#include <mutex>
 
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.h>
@@ -24,7 +26,6 @@
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 
-#include "config.hpp"
 #include "voxelengine.hpp"
 #include "logging.hpp"
 #include "octree.hpp"
