@@ -40,7 +40,7 @@ public:
     } stats;
 private:
     VulkanInstance *instance_;
-    
-    static void framebuffer_resized(GLFWwindow *window, int width, int height);
+
+    static void framebuffer_resized(GLFWwindow *window_, int width, int height);
     friend class VulkanInstance;
 };

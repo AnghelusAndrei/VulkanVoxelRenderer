@@ -29,9 +29,9 @@ void VoxelEngine::run()
         }
     instance_->device_.waitIdle();
 }
-void VoxelEngine::framebuffer_resized(GLFWwindow* window, int width, int height)
+void VoxelEngine::framebuffer_resized(GLFWwindow* window_, int width, int height)
 {
-    auto engine=reinterpret_cast<VoxelEngine*>(glfwGetWindowUserPointer(window));
+    auto engine=reinterpret_cast<VoxelEngine*>(glfwGetWindowUserPointer(window_));
 }
 
 VoxelEngine::~VoxelEngine()
