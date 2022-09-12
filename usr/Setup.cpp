@@ -7,6 +7,7 @@ void VoxelEngine::Setup(){
         "VulkanVoxelRenderer",
         true
     };
+    VoxelEngine::CreateWindow();
     VoxelEngine::octree->Setup(9);
     Camera::Properties camProperties = {
         .FOV = 90,

@@ -2,6 +2,8 @@
 
 
 void Camera::Setup(GLFWwindow *window, Stats *stats, Properties *properties_, glm::vec3 position_, glm::vec3 direction_){
+    window_ = window;
+    stats_ = stats;
     properties = properties_;
     position = position_;
     direction = direction_;
@@ -18,13 +20,13 @@ void Camera::FirstPersonHandler(keyLayout &layout, float speed, glm::vec3 up, do
     if(glfwGetKey(window_, layout.forward) == GLFW_PRESS)//forward movement
         position += (float)((*stats_).MS*speed) * direction;
 
-    if(glfwGetKey(window_, layout.forward) == GLFW_PRESS)//backward movement
+    if(glfwGetKey(window_, layout.backward) == GLFW_PRESS)//backward movement
         position -= (float)((*stats_).MS*speed) * direction;
 
-    if(glfwGetKey(window_, layout.forward) == GLFW_PRESS)//left movement
+    if(glfwGetKey(window_, layout.left) == GLFW_PRESS)//left movement
         position += (float)((*stats_).MS*speed) * glm::normalize(glm::cross(up, direction));
 
-    if(glfwGetKey(window_, layout.forward) == GLFW_PRESS)//right movement
+    if(glfwGetKey(window_, layout.right) == GLFW_PRESS)//right movement
         position += (float)((*stats_).MS*speed) * glm::normalize(glm::cross(direction, up));
 
     static glm::dvec2 newMouse;

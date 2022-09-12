@@ -12,12 +12,15 @@ class VoxelEngine
 {
 public:
     VoxelEngine();
-    void run();
-    ~VoxelEngine();
 
     void Setup();
     void Interactive();
     void Scene();
+    void CreateWindow();
+
+    void run();
+    
+    ~VoxelEngine();
 
 public:
     GLFWwindow *window;

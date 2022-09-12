@@ -1,25 +1,32 @@
 #include "voxelengine.hpp"
 
-VoxelEngine::VoxelEngine() : octree(), camera()
+VoxelEngine::VoxelEngine()
 {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // We specify the window hint in order for GLFW to not create by default a OpenGL context
 
-    Setup();
-    maxThreads = std::thread::hardware_concurrency();
+    octree = new Octree();
+    camera = new Camera();
 
-    window = glfwCreateWindow(config.window_width, config.window_height, config.window_title.c_str(), nullptr, nullptr);
+    Setup();
+
+    if(!window)glfwCreateWindow(config.window_width, config.window_height, config.window_title.c_str(), nullptr, nullptr);
+    maxThreads = std::thread::hardware_concurrency();
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebuffer_resized);
+
     instance_ = new VulkanInstance(this);
+}
+void VoxelEngine::CreateWindow(){
+    window = glfwCreateWindow(config.window_width, config.window_height, config.window_title.c_str(), nullptr, nullptr);
 }
 void VoxelEngine::run()
 {
     while (!glfwWindowShouldClose(window)) {
 
 #ifdef MULTITHREADED
-            std::thread UserInteractive(Interactive);
-            std::thread UserScene(Scene);
+            std::thread UserInteractive(&VoxelEngine::Interactive, this);
+            std::thread UserScene(&VoxelEngine::Scene, this);
 
             glfwPollEvents();
             instance_->render();
@@ -27,11 +34,12 @@ void VoxelEngine::run()
             UserInteractive.join();
             UserScene.join();
 #else
-            Interactive();
-            Scene();
 
             glfwPollEvents();
             instance_->render();
+
+            Interactive();
+            Scene();
 #endif
 
             stats.Update();
