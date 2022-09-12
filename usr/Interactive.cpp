@@ -1,5 +1,6 @@
-#include "voxelengine.hpp"
+#include "../src/voxelengine.hpp"
 
+class VoxelEngine;
 void VoxelEngine::Interactive(){
     Camera::keyLayout fpKeyLayout = {
                 .forward = GLFW_KEY_W,

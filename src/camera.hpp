@@ -3,7 +3,7 @@
 
 #include "vulkaninstance.hpp"
 
-
+struct Stats;
 class Camera{
     public:
         struct Properties{
@@ -22,13 +22,13 @@ class Camera{
             uint16_t y_axis_direction;
         };
 
-        Camera(GLFWwindow *window, glm::vec3 position, glm::vec3 direction, Properties &p, VoxelEngine::Stats &stats);
+        void Setup(GLFWwindow *window, Stats *stats, Properties *properties_, glm::vec3 position_, glm::vec3 direction_);
         void FirstPersonHandler(keyLayout &layout, float speed, glm::vec3 up, double Sensitivity);
 
     public:
         glm::vec3 position = glm::vec3(0,0,0);
         glm::vec3 direction = glm::vec3(1,0,0);
-        Properties properties;
+        Properties *properties;
 
         enum ProjectionEnums{
             PERSPECTIVE = 0,
@@ -42,7 +42,7 @@ class Camera{
 
     private:
         GLFWwindow *window_;
-        VoxelEngine::Stats &stats_;
+        Stats *stats_;
 
         glm::dvec2 mousePosition;
         glm::dvec2 rotation;

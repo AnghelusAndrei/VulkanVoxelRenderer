@@ -1,7 +1,10 @@
 #include "octree.hpp"
 
+Octree::Octree(){
 
-Octree::Octree(int depth){
+}
+
+void Octree::Setup(int depth){
     if(depth > maxDepth){
         LOGGING->error() << "Octree depth cannot be higher than " << maxDepth <<std::endl;
     }

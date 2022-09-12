@@ -5,6 +5,8 @@
 #include <ostream>
 #include <stdexcept>
 
+#include "vulkaninstance.hpp"
+
 #define EXCEPTION(...) (Logging::instance()->exception(__VA_ARGS__))
 #define LOGGING (Logging::instance())
 

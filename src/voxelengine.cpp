@@ -1,11 +1,9 @@
 #include "voxelengine.hpp"
 
-VoxelEngine::VoxelEngine()
+VoxelEngine::VoxelEngine() : octree(), camera()
 {
     glfwInit();
-    // We specify the window hint in order for GLFW to not
-    // create by default a OpenGL context
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // We specify the window hint in order for GLFW to not create by default a OpenGL context
 
     Setup();
 

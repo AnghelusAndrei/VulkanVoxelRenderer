@@ -24,10 +24,8 @@ endif()
 find_package(Vulkan REQUIRED)
 add_subdirectory(lib/VulkanMemoryAllocator)
 
-file(GLOB SOURCES "src/*.cpp")
-file(GLOB SCRIPTS "usr/*.cpp")
+file(GLOB SOURCES "src/*.cpp" "usr/*.cpp")
 add_executable(${PROJECT_NAME} ${SOURCES})
-add_executable(${PROJECT_NAME} ${SCRIPTS})
 
 file(GLOB SHADERS "src/*.comp")
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/shaders")

@@ -6,19 +6,16 @@
 
 #define maxDepth 15
 
-typedef struct leaf;
 struct leaf{
     glm::uvec4 data;
     uint32_t size;
     uint32_t index;
 };
 
-uint64_t OCTREE_INDEX = 8;
-
 class Octree{
     public:
         Octree();
-        Octree(int depth);
+        void Setup(int depth);
 
         void Insert(glm::uvec4 pos, glm::uvec4 data, uint32_t type);
         void Insert(glm::uvec4 pos, glm::uvec4 data, uint32_t type, bool (*typeCondition)(uint32_t));
@@ -35,9 +32,11 @@ class Octree{
             NODE  = 1,
         };
         
+        uint64_t OCTREE_INDEX = 8;
+        glm::uvec4 * octree;
+
         uint32_t depth_;
         uint32_t n;
-        glm::uvec4 * octree;
         bool upToDate = true;
 
     private:

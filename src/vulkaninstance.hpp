@@ -24,6 +24,7 @@
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 
+#include "config.hpp"
 #include "voxelengine.hpp"
 #include "logging.hpp"
 #include "octree.hpp"

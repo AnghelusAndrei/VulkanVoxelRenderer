@@ -3,9 +3,24 @@
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.hpp>
 
-#include "config.hpp"
 #include "vulkaninstance.hpp"
 
+struct Stats{
+    double FPS;
+    double MS;
+
+    double time1, time2 = glfwGetTime();
+    void Update(){
+        time1 = time2;
+        time2 = glfwGetTime();
+
+        MS = time2-time1;
+        FPS = 1000/MS;
+    }
+};
+
+class Octree;
+class Camera;
 class VulkanInstance;
 class VoxelEngine
 {
@@ -21,23 +36,12 @@ public:
 public:
     GLFWwindow *window;
     Config config;
+    Stats stats;
 
     Camera *camera;
-    Octree octree;
+    Octree *octree;
 public:
-    struct Stats{
-        double FPS;
-        double MS;
 
-        double time1, time2 = glfwGetTime();
-        void Update(){
-            time1 = time2;
-            time2 = glfwGetTime();
-
-            MS = time2-time1;
-            FPS = 1000/MS;
-        }
-    } stats;
 private:
     VulkanInstance *instance_;
 
