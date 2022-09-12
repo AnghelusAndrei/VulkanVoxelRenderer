@@ -1,6 +1,6 @@
 #include "voxelengine.hpp"
 
-void usr::Interactive(){
+void VoxelEngine::Interactive(){
     Camera::keyLayout fpKeyLayout = {
                 .forward = GLFW_KEY_W,
                 .backward = GLFW_KEY_S,
@@ -11,5 +11,5 @@ void usr::Interactive(){
                 .x_axis_direction = Camera::MOUSE_X,
                 .y_axis_direction = Camera::MOUSE_Y
     };
-    engine_->camera->FirstPersonHandler(fpKeyLayout, 1, glm::vec3(0,1,0), 2);
+    VoxelEngine::camera->FirstPersonHandler(fpKeyLayout, 1, glm::vec3(0,1,0), 2);
 }

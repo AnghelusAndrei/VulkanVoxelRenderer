@@ -22,7 +22,7 @@ class Camera{
             uint16_t y_axis_direction;
         };
 
-        Camera(GLFWwindow *window, glm::vec3 position, glm::vec3 direction, Properties &p, VulkanInstance::Stats &stats);
+        Camera(GLFWwindow *window, glm::vec3 position, glm::vec3 direction, Properties &p, VoxelEngine::Stats &stats);
         void FirstPersonHandler(keyLayout &layout, float speed, glm::vec3 up, double Sensitivity);
 
     public:
@@ -42,7 +42,7 @@ class Camera{
 
     private:
         GLFWwindow *window_;
-        VulkanInstance::Stats &stats_;
+        VoxelEngine::Stats &stats_;
 
         glm::dvec2 mousePosition;
         glm::dvec2 rotation;

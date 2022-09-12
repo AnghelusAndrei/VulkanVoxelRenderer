@@ -14,15 +14,33 @@ public:
     void run();
     ~VoxelEngine();
 
+    void Setup();
+    void Interactive();
+    void Scene();
+
 public:
-    GLFWwindow *window_;
-    VulkanInstance *instance_;
-    Config config_;
-    usr User;
+    GLFWwindow *window;
+    Config config;
 
     Camera *camera;
     Octree octree;
+public:
+    struct Stats{
+        double FPS;
+        double MS;
+
+        double time1, time2 = glfwGetTime();
+        void Update(){
+            time1 = time2;
+            time2 = glfwGetTime();
+
+            MS = time2-time1;
+            FPS = 1000/MS;
+        }
+    } stats;
 private:
+    VulkanInstance *instance_;
+    
     static void framebuffer_resized(GLFWwindow *window, int width, int height);
     friend class VulkanInstance;
 };

@@ -1,6 +1,6 @@
 #include "camera.hpp"
 
-Camera::Camera(GLFWwindow *window, glm::vec3 position_, glm::vec3 direction_, Properties &properties_, VulkanInstance::Stats &stats) : 
+Camera::Camera(GLFWwindow *window, glm::vec3 position_, glm::vec3 direction_, Properties &properties_, VoxelEngine::Stats &stats) : 
                   window_(window), position(position_),direction(direction_), properties(properties_),                 stats_(stats) {}
 
 void Camera::FirstPersonHandler(keyLayout &layout, float speed, glm::vec3 up, double Sensitivity){

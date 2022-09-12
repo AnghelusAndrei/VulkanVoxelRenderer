@@ -1,5 +1,5 @@
 #include "voxelengine.hpp"
 
-void usr::Scene(){
+void VoxelEngine::Scene(){
 
 }

@@ -7,27 +7,27 @@ VoxelEngine::VoxelEngine()
     // create by default a OpenGL context
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-    User = usr(this);
+    Setup();
 
-    window_ = glfwCreateWindow(config_.window_width, config_.window_height, config_.window_title.c_str(), nullptr, nullptr);
-    glfwSetWindowUserPointer(window_, this);
-    glfwSetFramebufferSizeCallback(window_, framebuffer_resized);
+    window = glfwCreateWindow(config.window_width, config.window_height, config.window_title.c_str(), nullptr, nullptr);
+    glfwSetWindowUserPointer(window, this);
+    glfwSetFramebufferSizeCallback(window, framebuffer_resized);
     instance_ = new VulkanInstance(this);
 }
 void VoxelEngine::run()
 {
-    while (!glfwWindowShouldClose(window_)) {
+    while (!glfwWindowShouldClose(window)) {
 
             glfwPollEvents();
             instance_->render();
 
             /** @todo multithreading Scene and Interactive **/
-            User.Interactive();
-            User.Scene();
+            Interactive();
+            Scene();
 
-            instance_->stats.Update();
+            stats.Update();
         }
-    instance_->base.device.waitIdle();
+    instance_->device_.waitIdle();
 }
 void VoxelEngine::framebuffer_resized(GLFWwindow* window, int width, int height)
 {
@@ -36,6 +36,6 @@ void VoxelEngine::framebuffer_resized(GLFWwindow* window, int width, int height)
 
 VoxelEngine::~VoxelEngine()
 {
-    glfwDestroyWindow(window_);
+    glfwDestroyWindow(window);
     glfwTerminate();
 }
