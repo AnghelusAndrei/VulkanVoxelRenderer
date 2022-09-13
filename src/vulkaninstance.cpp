@@ -9,10 +9,10 @@ VulkanInstance::VulkanInstance(VoxelEngine *engine) : engine_(engine)
     createLogicalDevice();
 
     VmaAllocatorCreateInfo allocator_create_info{};
-    allocator_create_info.vulkanApiVersion = VK_API_VERSION_1_0;
-    allocator_create_info.physicalDevice = static_cast<VkPhysicalDevice>(physical_device_);
-    allocator_create_info.device = static_cast<VkDevice>(device_);
-    allocator_create_info.instance = static_cast<VkInstance>(instance_);
+    allocator_create_info.vulkanApiVersion = VK_API_VERSION_1_1;
+    allocator_create_info.physicalDevice = static_cast<VkPhysicalDevice>(base.physicalDevice);
+    allocator_create_info.device = static_cast<VkDevice>(base.device);
+    allocator_create_info.instance = static_cast<VkInstance>(base.instance);
     vmaCreateAllocator(&allocator_create_info, &allocator_);
     createBuffer();
     createSwapChain();
@@ -30,12 +30,10 @@ VulkanInstance::~VulkanInstance()
 {
     // cleanupSwapChain();
 
-    device_.destroyPipeline(graphicsPipeline, nullptr);
-    device_.destroyPipelineLayout(pipelineLayout, nullptr);
+    base.device.destroyPipeline(graphicsPipeline, nullptr);
+    base.device.destroyPipelineLayout(pipelineLayout, nullptr);
 
-    device_.destroyRenderPass(renderPass, nullptr);
-
-    for (size_t i = 0; i < maxFrames; i++)
+    for (size_t i = 0; i < engine_->config_.MAX_FRAMES_IN_FLIGHT; i++)
     {
         device_.destroySemaphore(renderFinishedSemaphores[i], nullptr);
         device_.destroySemaphore(imageAvailableSemaphores[i], nullptr);
@@ -74,8 +72,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBit
 void VulkanInstance::createInstance()
 {
     vk::ApplicationInfo app_info{
-        engine_->config.window_title.c_str(), // Application Name
-        1,                                     // Application Version
+        engine_->config_.window_title.c_str(), // Application Name
+        0,                                     // Application Version
         nullptr,                               // Engine Name or nullptr
         0,                                     // Engine Version
         VK_API_VERSION_1_1                     // Vulkan API version
@@ -98,12 +96,12 @@ void VulkanInstance::createInstance()
                                                 extensions.size(),         // Extensions count
                                                 extensions.data());        // Extensions
 
-    instance_ = vk::createInstance(instance_create_info);
+    base.instance = vk::createInstance(instance_create_info);
 
     LOGGING->verbose() << "Created instance" << std::endl;
 
     // Dynamic dispatch loader is needed since debug messenger is part of a extension
-    dldy_ = vk::DispatchLoaderDynamic(instance_, vkGetInstanceProcAddr);
+    base.dispatch = vk::DispatchLoaderDynamic(instance_, vkGetInstanceProcAddr);
     vk::DebugUtilsMessengerCreateInfoEXT debug_info{
         vk::DebugUtilsMessengerCreateFlagsEXT{},                                                               // Create flags
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning, // Message severity
@@ -111,7 +109,7 @@ void VulkanInstance::createInstance()
             vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation, // Message type
         debug_callback                                         // Debug callback
     };
-    debug_messenger_ = instance_.createDebugUtilsMessengerEXT(debug_info, nullptr, dldy_);
+    base.debugMessenger = instance_.createDebugUtilsMessengerEXT(debug_info, nullptr, dldy_);
     LOGGING->verbose() << "Created debug messenger\n";
 }
 /**
@@ -121,12 +119,12 @@ void VulkanInstance::createSurface()
 {
     VkSurfaceKHR surface;
     VkResult result;
-    if ((result=glfwCreateWindowSurface(instance_, engine_->window, nullptr, &surface)) != VK_SUCCESS)
+    if ((result = glfwCreateWindowSurface(instance_, engine_->window_, nullptr, &surface)) != VK_SUCCESS)
     {
         throw EXCEPTION("Failed to create window surface!", result);
     }
     LOGGING->verbose() << "Created window surface" << std::endl;
-    surface_ = vk::SurfaceKHR(surface);
+    base.surface = vk::SurfaceKHR(surface);
 }
 /**
  * @brief Picks the physical device
@@ -135,9 +133,9 @@ void VulkanInstance::createSurface()
 void VulkanInstance::pickPhysicalDevice() /** @todo Return physical device? **/
 {
 
-    std::vector<vk::PhysicalDevice> devices = instance_.enumeratePhysicalDevices();
+    std::vector<vk::PhysicalDevice> devices = base.instance.enumeratePhysicalDevices();
     if (devices.size() == 0)
-        throw EXCEPTION("Failed to find GPUs with Vulkan support", vk::Result::eErrorDeviceLost);
+        throw EXCEPTION("Failed to find GPUs with Vulkan support");
 
     std::multimap<int, vk::PhysicalDevice> devicesmap;
     LOGGING->verbose() << "Available devices" << std::endl;
@@ -150,9 +148,14 @@ void VulkanInstance::pickPhysicalDevice() /** @todo Return physical device? **/
             score = 1000;
         devicesmap.insert(std::make_pair(score, device));
     }
-    /** @todo Check score **/
-    physical_device_ = devicesmap.rbegin()->second;
-    LOGGING->verbose() << "Selected device:  " << physical_device_.getProperties().deviceName << '\n';
+
+    if(devicesmap.rbegin()->first >0)
+    {
+        base.physicalDevice = devicesmap.rbegin()->second;
+    }else {
+        throw EXCEPTION("Failed to find suitable device");
+    }
+    LOGGING->verbose() << "Selected device:  " << base.physicalDevice.getProperties().deviceName << '\n';
 }
 
 VulkanInstance::QueueFamilyIndices VulkanInstance::findQueueFamilies()
@@ -214,7 +217,7 @@ void VulkanInstance::createLogicalDevice()
     createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-    if (engine_->config.debugging_enabled)
+    if (engine_->config_.debugging_enabled)
     {
         createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
         createInfo.ppEnabledLayerNames = validationLayers.data();
@@ -223,25 +226,25 @@ void VulkanInstance::createLogicalDevice()
     {
         createInfo.enabledLayerCount = 0;
     }
-    device_ = physical_device_.createDevice(createInfo);
+    base.device = base.physicalDevice.createDevice(createInfo);
 
-    device_.getQueue(indices.presentFamily.value(), 0, &presentQueue);
-    device_.getQueue(indices.computeFamily.value(), 0, &computeQueue);
+    device_.getQueue(indices.presentFamily.value(), 0, &base.presentQueue);
+    device_.getQueue(indices.computeFamily.value(), 0, &base.computeQueue);
 }
 
 VulkanInstance::SwapChainSupportDetails VulkanInstance::querySwapChainSupport()
 {
     SwapChainSupportDetails details;
     vk::Result result;
-    if ((result=physical_device_.getSurfaceCapabilitiesKHR(surface_, &details.capabilities)) != vk::Result::eSuccess)
+    if ((result = physical_device_.getSurfaceCapabilitiesKHR(surface_, &details.capabilities)) != vk::Result::eSuccess)
     {
-        throw EXCEPTION("Failed to get surface capabilities",result);
+        throw EXCEPTION("Failed to get surface capabilities", result);
     }
 
     uint32_t formatCount;
-    if ((result=physical_device_.getSurfaceFormatsKHR(surface_, &formatCount, nullptr)) != vk::Result::eSuccess)
+    if ((result = physical_device_.getSurfaceFormatsKHR(surface_, &formatCount, nullptr)) != vk::Result::eSuccess)
     {
-        throw EXCEPTION("Failed to get surface format",result);
+        throw EXCEPTION("Failed to get surface format", result);
     }
 
     if (formatCount != 0)
@@ -305,7 +308,7 @@ vk::Extent2D VulkanInstance::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR &
     else
     {
         int width, height;
-        glfwGetFramebufferSize(engine_->window, &engine_->config.window_width, &engine_->config.window_height);
+        glfwGetFramebufferSize(engine_->window_, &engine_->config_.window_width, &engine_->config_.window_height);
 
         VkExtent2D actualExtent = {
             static_cast<uint32_t>(width),
@@ -667,26 +670,26 @@ void VulkanInstance::createBuffer()
     allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
     allocation_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
     VkResult result;
-    if((result=vmaCreateBuffer(allocator_, reinterpret_cast<VkBufferCreateInfo *>(&buffer_create_info), &allocation_info, reinterpret_cast<VkBuffer *>(&staging_buffer_.buffer), &staging_buffer_.allocation, nullptr))!=VK_SUCCESS)
+    if ((result = vmaCreateBuffer(allocator_, reinterpret_cast<VkBufferCreateInfo *>(&buffer_create_info), &allocation_info, reinterpret_cast<VkBuffer *>(&staging_buffer_.buffer), &staging_buffer_.allocation, nullptr)) != VK_SUCCESS)
         throw EXCEPTION("Failed to create staging buffer", result);
     buffer_create_info.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer;
     allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
-    allocation_info.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    if((result=vmaCreateBuffer(allocator_, reinterpret_cast<VkBufferCreateInfo *>(&buffer_create_info), &allocation_info, reinterpret_cast<VkBuffer *>(&local_buffer_.buffer), &local_buffer_.allocation, nullptr))!=VK_SUCCESS)
+    allocation_info.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    if ((result = vmaCreateBuffer(allocator_, reinterpret_cast<VkBufferCreateInfo *>(&buffer_create_info), &allocation_info, reinterpret_cast<VkBuffer *>(&local_buffer_.buffer), &local_buffer_.allocation, nullptr)) != VK_SUCCESS)
         throw EXCEPTION("Failed to create local buffer", result);
 }
 void VulkanInstance::createSyncObjects()
 {
-    imageAvailableSemaphores.resize(maxFrames);
-    renderFinishedSemaphores.resize(maxFrames);
-    inFlightFences.resize(maxFrames);
+    imageAvailableSemaphores.resize(engine_->config_.MAX_FRAMES_IN_FLIGHT);
+    renderFinishedSemaphores.resize(engine_->config_.MAX_FRAMES_IN_FLIGHT);
+    inFlightFences.resize(engine_->config_.MAX_FRAMES_IN_FLIGHT);
     imagesInFlight.resize(swapChainImages.size(), vk::Fence{});
 
     vk::SemaphoreCreateInfo semaphoreInfo{};
 
     vk::FenceCreateInfo fenceInfo{vk::FenceCreateFlagBits::eSignaled};
 
-    for (size_t i = 0; i < maxFrames; i++)
+    for (size_t i = 0; i < engine_->config_.MAX_FRAMES_IN_FLIGHT; i++)
     {
         if (device_.createSemaphore(&semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != vk::Result::eSuccess ||
             device_.createSemaphore(&semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != vk::Result::eSuccess ||
@@ -700,10 +703,10 @@ void VulkanInstance::createSyncObjects()
 void VulkanInstance::recreateSwapChain()
 {
     int width = 0, height = 0;
-    glfwGetFramebufferSize(engine_->window, &width, &height);
+    glfwGetFramebufferSize(engine_->window_, &width, &height);
     while (width == 0 || height == 0)
     {
-        glfwGetFramebufferSize(engine_->window, &width, &height);
+        glfwGetFramebufferSize(engine_->window_, &width, &height);
         glfwWaitEvents();
     }
 
@@ -793,7 +796,7 @@ void VulkanInstance::render()
 
     presentInfo.pImageIndices = &imageIndex;
     device_.waitIdle();
-    result = presentQueue.presentKHR(&presentInfo); // VK_SUBOPTIMAL_KHR
+    result = base.presentQueue.presentKHR(&presentInfo); // VK_SUBOPTIMAL_KHR
     device_.waitIdle();
     if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || framebufferResized)
     {
@@ -805,5 +808,5 @@ void VulkanInstance::render()
         throw std::runtime_error("failed to present swap chain image!");
     }
 
-    currentFrame = (currentFrame + 1) % maxFrames;
+    currentFrame = (currentFrame + 1) % engine_->config_.MAX_FRAMES_IN_FLIGHT;
 }

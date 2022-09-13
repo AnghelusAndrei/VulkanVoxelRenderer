@@ -33,7 +33,7 @@ public:
 
 private:
     VulkanInstance *instance_;
-    uint8_t maxThreads;
+    int maxThreads;
 
     static void framebuffer_resized(GLFWwindow *window_, int width, int height);
     friend class VulkanInstance;

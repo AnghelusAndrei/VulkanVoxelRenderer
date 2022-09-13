@@ -11,11 +11,19 @@ VoxelEngine::VoxelEngine()
     Setup();
 
     if(!window)glfwCreateWindow(config.window_width, config.window_height, config.window_title.c_str(), nullptr, nullptr);
-    maxThreads = std::thread::hardware_concurrency();
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebuffer_resized);
 
     instance_ = new VulkanInstance(this);
+
+    maxThreads = std::thread::hardware_concurrency();
+    LOGGING->verbose() << "Found "<<maxThreads<<" threads on the CPU" << std::endl;
+#ifdef MULTITHREADED
+    LOGGING->verbose() << "Running using multithreading" << std::endl;
+#else
+    LOGGING->verbose() << "Running without multithreading" << std::endl;
+#endif
+
 }
 void VoxelEngine::CreateWindow(){
     window = glfwCreateWindow(config.window_width, config.window_height, config.window_title.c_str(), nullptr, nullptr);
