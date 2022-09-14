@@ -29,8 +29,7 @@ public:
 
     Camera *camera;
     Octree *octree;
-public:
-
+    
 private:
     VulkanInstance *instance_;
     int maxThreads;
