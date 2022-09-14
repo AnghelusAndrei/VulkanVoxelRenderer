@@ -123,6 +123,7 @@ private:
     static const uint32_t maxFrames = 2;
     struct VulkanBase
     {
+        
         vk::Instance instance;
         vk::DispatchLoaderDynamic dispatch;
         vk::DebugUtilsMessengerEXT debugMessenger;
@@ -130,17 +131,17 @@ private:
         vk::Device device;
         vk::SurfaceKHR surface;
         vk::SwapchainKHR swapchain;
+
         vk::Queue presentQueue;
         vk::Queue computeQueue;
 
-        vk::Pipeline pipelines[3];
+        vk::Pipeline raycastingPipeline, lightingPipeline, renderPipeline;
         vk::CommandPool commandPool;
-        vk::DescriptorPool descriptorPools[3];
+        vk::DescriptorPool raycastingPool, lightingPool, renderPool;
+        vk::DescriptorSetLayout raycastingSetLayout, lightingSetLayout, renderSetLayout;
         Buffer stagingBuffer;
         Buffer octreeBuffer;
-        Buffer screenBuffer;
-        Buffer voxelApparitionBuffer;
-        Buffer voxelIlluminationBuffer;
+        Buffer lightingBuffer;
     } base;
 
     
@@ -148,7 +149,7 @@ private:
     {
         vk::Image image;
         vk::ImageView imageView;
-        vk::DescriptorSet descriptorSets[3];
+        vk::DescriptorSet raycastingSet, lightingSet, renderSet;
 
         vk::CommandBuffer commandBuffer;
         vk::CommandBuffer copyCommandBuffer;
@@ -166,4 +167,10 @@ private:
      * 
      */
     friend class VoxelEngine;
+    friend class VulkanUtils;
+};
+
+class VulkanUtils {
+public:
+    static vk::DescriptorPool createDescriptorPool(VulkanInstance::VulkanBase base, uint32_t numElements, std::vector<vk::DescriptorType> descriptorTypes);
 };
