@@ -14,4 +14,18 @@ void VoxelEngine::Setup(){
         .projection = Camera::PERSPECTIVE
     };
     VoxelEngine::camera->Setup(window, &stats, &camProperties, glm::vec3(0,0,0), glm::vec3(1,0,0));
+
+    Object a(octree, glm::vec3(0,0,0), glm::vec3(0,0,0), glm::vec3(1,1,1));
+    a.loadWavefrontObj("file", false, false);
+    
+    MaterialCollection::Material m1{
+        //data
+    };
+    LightCollection::Light l1{
+        //data
+    };
+
+    materials->add(&m1);
+    lights->add(&l1);
+    objects->add(&a, m1.id);
 }

@@ -6,7 +6,7 @@
 class Octree;
 class Object{
 public:
-    Object(Octree *octree, glm::uvec3 position_, glm::uvec3 rotation_, glm::uvec3 scale_, uint32_t object_id);
+    Object(Octree *octree, glm::uvec3 position_, glm::uvec3 rotation_, glm::uvec3 scale_);
     ~Object();
     bool loadWavefrontObj(std::string filename, bool hasTexture, bool hasNormal);
 
@@ -19,7 +19,7 @@ public:
     glm::uvec3 position;
     glm::uvec3 rotation;
     glm::uvec3 scale;
-    uint32_t id;
+    uint16_t id;
     std::string tag;
 private:
     std::vector<glm::uvec3> voxels_p[2]; //position

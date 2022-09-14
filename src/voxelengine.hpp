@@ -10,6 +10,7 @@ class Octree;
 class Camera;
 class MaterialCollection;
 class LightCollection;
+class ObjectCollection;
 class VulkanInstance;
 class VoxelEngine
 {
@@ -32,9 +33,10 @@ public:
 
     Camera *camera;
     Octree *octree;
-    MaterialCollection *materialCollection;
-    LightCollection *lightCollection;
-    std::vector<Object*> objects;
+
+    MaterialCollection *materials;
+    LightCollection *lights;
+    ObjectCollection *objects;
     
 private:
     VulkanInstance *instance_p;

@@ -36,6 +36,7 @@
 #include "object.hpp"
 #include "materials.hpp"
 #include "lights.hpp"
+#include "objectCollection.hpp"
 
 #define MULTITHREADED
 

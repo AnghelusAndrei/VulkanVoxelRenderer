@@ -4,19 +4,22 @@
 #include "vulkaninstance.hpp"
 
 class MaterialCollection{
-    public:
-        MaterialCollection();
-        ~MaterialCollection();
+public:
+    MaterialCollection();
+    ~MaterialCollection();
 
-        struct Material{
+    struct Material{
+        //data
 
-        };
+        //address in collection
+        uint32_t id;
+    };
 
-        int add(const Material &m);//returns id
+    void add(Material *m);//returns id
 
-    public:
-        std::vector<Material> collection;
-    private:
+public:
+    std::vector<Material> collection;
+private:
 
 };
 

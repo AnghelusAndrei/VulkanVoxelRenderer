@@ -7,8 +7,9 @@ VoxelEngine::VoxelEngine()
 
     octree = new Octree();
     camera = new Camera();
-    lightCollection = new LightCollection();
-    materialCollection = new MaterialCollection();
+    lights = new LightCollection();
+    materials = new MaterialCollection();
+    objects = new ObjectCollection();
 
     Setup();
 
@@ -63,11 +64,12 @@ void VoxelEngine::framebuffer_resized(GLFWwindow* window_, int width, int height
 
 VoxelEngine::~VoxelEngine()
 {
-    glfwDestroyWindow(window);
-    glfwTerminate();
-    delete materialCollection;
-    delete lightCollection;
+    delete materials;
+    delete lights;
+    delete objects;
     delete octree;
     delete camera;
     delete instance_p;
+    glfwDestroyWindow(window);
+    glfwTerminate();
 }

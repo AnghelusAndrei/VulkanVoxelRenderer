@@ -1,6 +1,6 @@
 #include "object.hpp"
 
-Object::Object(Octree *octree, glm::uvec3 position_, glm::uvec3 rotation_, glm::uvec3 scale_, uint32_t object_id) : octree_p(octree), position(position_), rotation(rotation_), scale(scale_), id(object_id){
+Object::Object(Octree *octree, glm::uvec3 position_, glm::uvec3 rotation_, glm::uvec3 scale_) : octree_p(octree), position(position_), rotation(rotation_), scale(scale_){
 
 }
 

@@ -4,19 +4,22 @@
 #include "vulkaninstance.hpp"
 
 class LightCollection{
-    public:
-        LightCollection();
-        ~LightCollection();
+public:
+    LightCollection();
+    ~LightCollection();
 
-        struct Light{
+    struct Light{
+        //data
 
-        };
+        //address in collection
+        uint32_t id;
+    };
 
-        int add(const Light &m);//returns id
+    void add(Light *m);//returns id
 
-    public:
-        std::vector<Light> collection;
-    private:
+public:
+    std::vector<Light> collection;
+private:
 
 };
 
