@@ -7,6 +7,8 @@ VoxelEngine::VoxelEngine()
 
     octree = new Octree();
     camera = new Camera();
+    lightCollection = new LightCollection();
+    materialCollection = new MaterialCollection();
 
     Setup();
 
@@ -14,10 +16,10 @@ VoxelEngine::VoxelEngine()
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebuffer_resized);
 
-    instance_ = new VulkanInstance(this);
+    instance_p = new VulkanInstance(this);
 
-    maxThreads = std::thread::hardware_concurrency();
-    LOGGING->verbose() << "Found "<<maxThreads<<" threads on the CPU" << std::endl;
+    maxThreads_p = std::thread::hardware_concurrency();
+    LOGGING->verbose() << "Found "<<maxThreads_p<<" threads on the CPU" << std::endl;
 #ifdef MULTITHREADED
     LOGGING->verbose() << "Running using multithreading" << std::endl;
 #else
@@ -37,7 +39,7 @@ void VoxelEngine::run()
             std::thread UserScene(&VoxelEngine::Scene, this);
 
             glfwPollEvents();
-            instance_->render();
+            instance_p->render();
 
             UserInteractive.join();
             UserScene.join();
@@ -52,7 +54,7 @@ void VoxelEngine::run()
 
             stats.Update();
         }
-    instance_->device_.waitIdle();
+    instance_p->device_.waitIdle();
 }
 void VoxelEngine::framebuffer_resized(GLFWwindow* window_, int width, int height)
 {
@@ -63,4 +65,9 @@ VoxelEngine::~VoxelEngine()
 {
     glfwDestroyWindow(window);
     glfwTerminate();
+    delete materialCollection;
+    delete lightCollection;
+    delete octree;
+    delete camera;
+    delete instance_p;
 }

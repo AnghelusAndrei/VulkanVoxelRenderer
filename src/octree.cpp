@@ -4,21 +4,21 @@ Octree::Octree(){
 
 }
 
-void Octree::Setup(int depth){
-    if(depth > maxDepth){
+void Octree::Setup(int depth_){
+    if(depth_ > maxDepth){
         LOGGING->error() << "Octree depth cannot be higher than " << maxDepth <<std::endl;
     }
 
-    depth_ = depth;
+    depth = depth_;
     n = 1<<depth;
     int o_m = 8;
 
     for(int i = 0;i<depth;i++){
-        OCTREE_MAX_LENGTH += o_m;
+        octreeMaxLength_p += o_m;
         o_m *= 8;
     }
 
-    octree = new glm::uvec4[OCTREE_MAX_LENGTH];
+    octree = new glm::uvec4[octreeMaxLength_p];
 } 
 
 void Octree::upload(){
@@ -30,23 +30,38 @@ void Octree::upload(){
     //
 }
 
-void Octree::Insert(glm::uvec3 pos, glm::uvec4 data, uint32_t object_id){
+glm::vec3 Octree::GetVNormal(glm::uvec3 data){
+    glm::vec3 normal;
+    normal.x = (data.x>>8)/100 - 100;
+    normal.y = (data.y>>8)/100 - 100;
+    normal.z = (data.z>>8)/100 - 100;
+}
+
+glm::uvec3 Octree::SetVNormal(glm::vec3 normal){
+    glm::vec3 data;
+    data.x += (uint8_t)(normal.x*100 + 100)<<8;
+    data.y += (uint8_t)(normal.y*100 + 100)<<8;
+    data.z += (uint8_t)(normal.z*100 + 100)<<8;
+    return normal;
+}
+
+void Octree::Insert(glm::uvec3 pos, glm::uvec3 data, uint32_t object_id){
     uint32_t d=1;
     int offset = 0;
     int j = 0;
 
-    while(d<depth_){
+    while(d<depth){
         uint32_t i = offset+Locate(pos,d);
 
         switch (octree[i].w)
         {
             case LEAF:
-                if(free_mem.empty()){
-                    offset = OCTREE_INDEX;
-                    OCTREE_INDEX+=8;
+                if(freeMem_p.empty()){
+                    offset = octreeIndex;
+                    octreeIndex+=8;
                 }else{
-                    offset = free_mem.top();
-                    free_mem.pop();
+                    offset = freeMem_p.top();
+                    freeMem_p.pop();
                 }
                 octree[i].x =offset;
                 octree[i].w = NODE;
@@ -74,24 +89,24 @@ void Octree::Insert(glm::uvec3 pos, glm::uvec4 data, uint32_t object_id){
     };
 }
 
-void Octree::Insert(glm::uvec3 pos, glm::uvec4 data, uint32_t object_id, bool (*object_idCondition)(uint32_t)){
+void Octree::Insert(glm::uvec3 pos, glm::uvec3 data, uint32_t object_id, bool (*object_idCondition)(uint32_t)){
     uint32_t d=1;
     int offset = 0;
     int j = 0;
     std::stack<int> nodes;
 
-    while(d<depth_){
+    while(d<depth){
         uint32_t i = offset+Locate(pos,d);
 
         switch (octree[i].w)
         {
             case LEAF:
-                if(free_mem.empty()){
-                    offset = OCTREE_INDEX;
-                    OCTREE_INDEX+=8;
+                if(freeMem_p.empty()){
+                    offset = octreeIndex;
+                    octreeIndex+=8;
                 }else{
-                    offset = free_mem.top();
-                    free_mem.pop();
+                    offset = freeMem_p.top();
+                    freeMem_p.pop();
                 }
                 octree[i].x =offset;
                 octree[i].w = NODE;
@@ -122,7 +137,7 @@ void Octree::Insert(glm::uvec3 pos, glm::uvec4 data, uint32_t object_id, bool (*
     }else{
         if(octree[i].w == LEAF){
             while(octree[nodes.top()].z <= 0 && !nodes.empty()){
-                free_mem.push(octree[nodes.top()].x);
+                freeMem_p.push(octree[nodes.top()].x);
                 octree[nodes.top()] = {0,0,0,0};
                 nodes.pop();
                 octree[nodes.top()].z--;
@@ -136,7 +151,7 @@ void Octree::Remove(glm::uvec3 pos){
     int offset = 0;
     std::stack<int> nodes;
 
-    while(d<=depth_){
+    while(d<=depth){
         uint32_t i = offset+Locate(pos,d);
 
         switch (octree[i].w)
@@ -152,7 +167,7 @@ void Octree::Remove(glm::uvec3 pos){
             octree[nodes.top()].z--;
 
             while(octree[nodes.top()].z <= 0 && !nodes.empty()){
-                free_mem.push(octree[nodes.top()].x);
+                freeMem_p.push(octree[nodes.top()].x);
                 octree[nodes.top()] = {0,0,0,0};
                 nodes.pop();
                 octree[nodes.top()].z--;
@@ -171,7 +186,7 @@ void Octree::Remove(glm::uvec3 pos, bool (*object_idCondition)(uint32_t)){
     int offset = 0;
     std::stack<int> nodes;
 
-    while(d<=depth_){
+    while(d<=depth){
         uint32_t i = offset+Locate(pos,d);
 
         switch (octree[i].w)
@@ -189,7 +204,7 @@ void Octree::Remove(glm::uvec3 pos, bool (*object_idCondition)(uint32_t)){
             octree[nodes.top()].z--;
 
             while(octree[nodes.top()].z <= 0 && !nodes.empty()){
-                free_mem.push(octree[nodes.top()].x);
+                freeMem_p.push(octree[nodes.top()].x);
                 octree[nodes.top()] = {0,0,0,0};
                 nodes.pop();
                 octree[nodes.top()].z--;
@@ -209,7 +224,7 @@ void Octree::Move(glm::uvec3 from, glm::uvec3 to){
     std::stack<int> nodes;
     glm::uvec4 data;
 
-    while(d<=depth_){
+    while(d<=depth){
         uint32_t i = offset+Locate(from,d);
 
         switch (octree[i].w)
@@ -226,7 +241,7 @@ void Octree::Move(glm::uvec3 from, glm::uvec3 to){
             octree[nodes.top()].z--;
 
             while(octree[nodes.top()].z <= 0 && !nodes.empty()){
-                free_mem.push(octree[nodes.top()].x);
+                freeMem_p.push(octree[nodes.top()].x);
                 octree[nodes.top()] = {0,0,0,0};
                 nodes.pop();
                 octree[nodes.top()].z--;
@@ -240,18 +255,18 @@ void Octree::Move(glm::uvec3 from, glm::uvec3 to){
             offset = nodes.top();
             int k = 0;
 
-            while(d<=depth_){
+            while(d<=depth){
                 uint32_t j = offset+Locate(to,d);
 
                 switch (octree[i].w)
                 {
                     case LEAF:
-                        if(free_mem.empty()){
-                            offset = OCTREE_INDEX;
-                            OCTREE_INDEX+=8;
+                        if(freeMem_p.empty()){
+                            offset = octreeIndex;
+                            octreeIndex+=8;
                         }else{
-                            offset = free_mem.top();
-                            free_mem.pop();
+                            offset = freeMem_p.top();
+                            freeMem_p.pop();
                         }
                         octree[j].x =offset;
                         octree[j].w = NODE;
@@ -277,12 +292,88 @@ void Octree::Move(glm::uvec3 from, glm::uvec3 to){
     }
 }
 
+void Octree::Move(glm::uvec3 from, glm::uvec3 to, glm::uvec3 data, uint32_t object_id){
+    uint32_t d=1;
+    int offset = 0;
+    std::stack<int> nodes;
+
+    while(d<=depth){
+        uint32_t i = offset+Locate(from,d);
+
+        switch (octree[i].w)
+        {
+        case LEAF:
+            return;
+        case NODE:
+            nodes.push(i);
+            offset = octree[i].x;
+            break;
+        default:
+            data = octree[i];
+            octree[i] = {0,0,0,0};
+            octree[nodes.top()].z--;
+
+            while(octree[nodes.top()].z <= 0 && !nodes.empty()){
+                freeMem_p.push(octree[nodes.top()].x);
+                octree[nodes.top()] = {0,0,0,0};
+                nodes.pop();
+                octree[nodes.top()].z--;
+                d--;
+            }
+
+            while(!inNode(to, from, d)){
+                nodes.pop();
+                d--;
+            }
+            offset = nodes.top();
+            int k = 0;
+
+            while(d<=depth){
+                uint32_t j = offset+Locate(to,d);
+
+                switch (octree[i].w)
+                {
+                    case LEAF:
+                        if(freeMem_p.empty()){
+                            offset = octreeIndex;
+                            octreeIndex+=8;
+                        }else{
+                            offset = freeMem_p.top();
+                            freeMem_p.pop();
+                        }
+                        octree[j].x =offset;
+                        octree[j].w = NODE;
+                        octree[j].z = 0;
+                        if(d>1)octree[j].z++;
+                        k = j;
+                        break;
+                    case NODE:
+                        k = j;
+                        offset = octree[j].y;
+                        break;
+                }
+                d++;
+            }
+
+            uint32_t q = offset+Locate(to,d);
+            if(octree[q].w <= 1)octree[k].z++;
+            octree[q].x = data.x;
+            octree[q].y = data.y;
+            octree[q].z = data.z;
+            octree[q].w = object_id;
+            return;
+        }
+
+        d++;
+    }
+}
+
 Octree::leaf Octree::Lookup(glm::uvec3 pos){
     uint32_t d=1;
     int offset = 0;
     leaf l;
 
-    while(d<=depth_){
+    while(d<=depth){
         uint32_t i = offset+Locate(pos,d);
         int s = n/(1<<d);
 

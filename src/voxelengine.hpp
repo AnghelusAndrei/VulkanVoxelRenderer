@@ -5,8 +5,11 @@
 #include "stats.hpp"
 #include "vulkaninstance.hpp"
 
+class Object;
 class Octree;
 class Camera;
+class MaterialCollection;
+class LightCollection;
 class VulkanInstance;
 class VoxelEngine
 {
@@ -29,10 +32,13 @@ public:
 
     Camera *camera;
     Octree *octree;
+    MaterialCollection *materialCollection;
+    LightCollection *lightCollection;
+    std::vector<Object*> objects;
     
 private:
-    VulkanInstance *instance_;
-    int maxThreads;
+    VulkanInstance *instance_p;
+    int maxThreads_p;
 
     static void framebuffer_resized(GLFWwindow *window_, int width, int height);
     friend class VulkanInstance;

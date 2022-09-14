@@ -1,7 +1,11 @@
 #include "object.hpp"
 
-Object::Object(Octree *octree, glm::uvec3 position_, glm::uvec3 rotation_, glm::uvec3 scale_, uint32_t object_id) : octree_(octree), position(position_), rotation(rotation_), scale(scale_), id(object_id){
+Object::Object(Octree *octree, glm::uvec3 position_, glm::uvec3 rotation_, glm::uvec3 scale_, uint32_t object_id) : octree_p(octree), position(position_), rotation(rotation_), scale(scale_), id(object_id){
 
+}
+
+Object::~Object(){
+    remove();
 }
 
 bool Object::loadWavefrontObj(std::string filename, bool hasTexture, bool hasNormal){
@@ -9,19 +13,31 @@ bool Object::loadWavefrontObj(std::string filename, bool hasTexture, bool hasNor
 }
 
 void Object::update(){
-    for(int i = 0; i<voxels_[1].size(); i++){
-        octree_->Move(voxels_[0][i], voxels_[1][i]);
-        voxels_[0][i]=voxels_[1][i];
-        voxels_data_[0][i]=voxels_data_[1][i];
+    for(int i = 0; i<voxels_p[1].size(); i++){
+        octree_p->Move(voxels_p[0][i], voxels_p[1][i], voxels_data_p[1][i], id);
+        voxels_p[0][i]=voxels_p[1][i];
+        voxels_data_p[0][i]=voxels_data_p[1][i];
     }
-    octree_->upToDate = false;
+    octree_p->upToDate = false;
 }
 void Object::remove(){
-    for(int i = 0; i<voxels_[1].size(); i++){
-        octree_->Remove(voxels_[0][i]);
-    } 
+    for(int i=voxels_p[1].size();i>0;i--){
+        octree_p->Remove(voxels_p[1][i]);
+        voxels_p[1].pop_back();
+        voxels_data_p[1].pop_back();
+        voxels_p[0].pop_back();
+        voxels_data_p[0].pop_back();
+    }
 }
 
-void Object::setPosition(glm::uvec3 p){}
-void Object::setRotation(glm::vec3 r){}
-void Object::setScale(glm::vec3 s){}
+void Object::setPosition(glm::uvec3 p){
+    for(glm::uvec3 & voxel : voxels_p[1]){
+        voxel-=position;
+        voxel+=p;
+    }
+}
+void Object::setRotation(glm::vec3 r){
+    for(int i = 0; i<voxels_p[1].size(); i++){
+        glm::vec3 normal = octree_p->GetVNormal(voxels_data_p[1][i]);
+    }
+}

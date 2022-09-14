@@ -33,14 +33,11 @@
 #include "octree.hpp"
 #include "camera.hpp"
 #include "stats.hpp"
+#include "object.hpp"
+#include "materials.hpp"
+#include "lights.hpp"
 
 #define MULTITHREADED
-
-struct Buffer
-{
-    VmaAllocation allocation;
-    vk::Buffer buffer;
-};
 
 class VoxelEngine;
 class VulkanInstance
@@ -50,6 +47,9 @@ public:
     void render();
     ~VulkanInstance();
 
+public:
+    
+
 private:
     void createInstance();
     void createSurface();
@@ -57,8 +57,6 @@ private:
     void createLogicalDevice();
     void createSwapChain();
     void createImageViews();
-    void setupVma();
-    void createBuffer();
     void createDescriptorSetLayout();
     void createComputePipeline();
     void createCommandPool();
@@ -67,14 +65,8 @@ private:
     void createCommandBuffers();
     void createSyncObjects();
     void recreateSwapChain();
-
 private:
-private:
-    VmaAllocator allocator_;
-    
     VoxelEngine *engine_;
-    Buffer staging_buffer_;
-    Buffer local_buffer_;
     struct QueueFamilyIndices
     {
         std::optional<uint32_t> computeFamily;
@@ -149,12 +141,11 @@ private:
     std::vector<vk::Fence> inFlightFences;
     std::vector<vk::Fence> imagesInFlight;
     uint32_t currentFrame = 0;
-    uint8_t maxFrames = 2;
+    uint32_t maxFrames = 2;
     void cleanupSwapChain();
     bool framebufferResized = false;
 
 
 
     friend class VoxelEngine;
-
 };

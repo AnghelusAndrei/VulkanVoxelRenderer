@@ -22,8 +22,8 @@ class Camera{
             uint16_t y_axis_direction;
         };
 
-        void Setup(GLFWwindow *window, Stats *stats, Properties *properties_, glm::vec3 position_, glm::vec3 direction_);
-        void FirstPersonHandler(keyLayout &layout, float speed, glm::vec3 up, double Sensitivity);
+        void Setup(GLFWwindow *window_, Stats *stats_, Properties *properties_, glm::vec3 position_, glm::vec3 direction_);
+        void FirstPersonHandler(const keyLayout &layout, float speed, glm::vec3 up, double Sensitivity);
 
     public:
         glm::vec3 position = glm::vec3(0,0,0);
@@ -41,11 +41,11 @@ class Camera{
         };
 
     private:
-        GLFWwindow *window_;
-        Stats *stats_;
+        GLFWwindow *window_p;
+        Stats *stats_p;
 
-        glm::dvec2 mousePosition;
-        glm::dvec2 rotation;
+        glm::dvec2 mousePosition_p;
+        glm::dvec2 rotation_p;
 };
 
 #endif

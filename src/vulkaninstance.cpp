@@ -2,19 +2,10 @@
 
 VulkanInstance::VulkanInstance(VoxelEngine *engine) : engine_(engine)
 {
-
     createInstance();
     createSurface();
     pickPhysicalDevice();
     createLogicalDevice();
-
-    VmaAllocatorCreateInfo allocator_create_info{};
-    allocator_create_info.vulkanApiVersion = VK_API_VERSION_1_0;
-    allocator_create_info.physicalDevice = static_cast<VkPhysicalDevice>(physical_device_);
-    allocator_create_info.device = static_cast<VkDevice>(device_);
-    allocator_create_info.instance = static_cast<VkInstance>(instance_);
-    vmaCreateAllocator(&allocator_create_info, &allocator_);
-    createBuffer();
     createSwapChain();
     createImageViews();
     createDescriptorSetLayout();
@@ -120,10 +111,9 @@ void VulkanInstance::createInstance()
 void VulkanInstance::createSurface()
 {
     VkSurfaceKHR surface;
-    VkResult result;
-    if ((result=glfwCreateWindowSurface(instance_, engine_->window, nullptr, &surface)) != VK_SUCCESS)
+    if (glfwCreateWindowSurface(instance_, engine_->window, nullptr, &surface) != VK_SUCCESS)
     {
-        throw EXCEPTION("Failed to create window surface!", result);
+        throw EXCEPTION("Failed to create window surface!");
     }
     LOGGING->verbose() << "Created window surface" << std::endl;
     surface_ = vk::SurfaceKHR(surface);
@@ -137,7 +127,7 @@ void VulkanInstance::pickPhysicalDevice() /** @todo Return physical device? **/
 
     std::vector<vk::PhysicalDevice> devices = instance_.enumeratePhysicalDevices();
     if (devices.size() == 0)
-        throw EXCEPTION("Failed to find GPUs with Vulkan support", vk::Result::eErrorDeviceLost);
+        throw EXCEPTION("Failed to find GPUs with Vulkan support");
 
     std::multimap<int, vk::PhysicalDevice> devicesmap;
     LOGGING->verbose() << "Available devices" << std::endl;
@@ -232,16 +222,16 @@ void VulkanInstance::createLogicalDevice()
 VulkanInstance::SwapChainSupportDetails VulkanInstance::querySwapChainSupport()
 {
     SwapChainSupportDetails details;
-    vk::Result result;
-    if ((result=physical_device_.getSurfaceCapabilitiesKHR(surface_, &details.capabilities)) != vk::Result::eSuccess)
+
+    if (physical_device_.getSurfaceCapabilitiesKHR(surface_, &details.capabilities) != vk::Result::eSuccess)
     {
-        throw EXCEPTION("Failed to get surface capabilities",result);
+        throw EXCEPTION("Failed to get surface capabilities");
     }
 
     uint32_t formatCount;
-    if ((result=physical_device_.getSurfaceFormatsKHR(surface_, &formatCount, nullptr)) != vk::Result::eSuccess)
+    if (physical_device_.getSurfaceFormatsKHR(surface_, &formatCount, nullptr) != vk::Result::eSuccess)
     {
-        throw EXCEPTION("Failed to get surface format",result);
+        throw EXCEPTION("Failed to get surface format");
     }
 
     if (formatCount != 0)
@@ -317,7 +307,6 @@ vk::Extent2D VulkanInstance::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR &
         return actualExtent;
     }
 }
-
 void VulkanInstance::createSwapChain()
 {
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport();
@@ -401,14 +390,17 @@ void VulkanInstance::createImageViews()
 
 void VulkanInstance::createDescriptorSetLayout()
 {
-    std::vector<vk::DescriptorSetLayoutBinding> layout_bindings; // VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO
-    layout_bindings.push_back(vk::DescriptorSetLayoutBinding{0, vk::DescriptorType::eStorageImage, 1, vk::ShaderStageFlagBits::eCompute, &imageSampler});
-    layout_bindings.push_back(vk::DescriptorSetLayoutBinding{1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr});
+    vk::DescriptorSetLayoutBinding uboLayoutBinding{}; // VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO
+    uboLayoutBinding.binding = 0;
+    uboLayoutBinding.descriptorType = vk::DescriptorType::eStorageImage;
+    uboLayoutBinding.descriptorCount = 1;
+    uboLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eCompute;
+    uboLayoutBinding.pImmutableSamplers = &imageSampler;
 
     vk::DescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = vk::StructureType::eDescriptorSetLayoutCreateInfo;
-    layoutInfo.bindingCount = layout_bindings.size();
-    layoutInfo.pBindings = layout_bindings.data();
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &uboLayoutBinding;
 
     if (device_.createDescriptorSetLayout(&layoutInfo, nullptr, &descriptorSetLayout) != vk::Result::eSuccess)
     {
@@ -551,18 +543,18 @@ void VulkanInstance::recordImageBarrier(vk::CommandBuffer buffer, vk::Image imag
 
 void VulkanInstance::createDescriptorPool()
 {
-    std::vector<vk::DescriptorPoolSize> pool_sizes;
-    pool_sizes.push_back(vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, static_cast<uint32_t>(swapChainImages.size())});
-    pool_sizes.push_back(vk::DescriptorPoolSize{vk::DescriptorType::eStorageImage, static_cast<uint32_t>(swapChainImages.size())});
+    vk::DescriptorPoolSize poolSize{};
+    poolSize.type = vk::DescriptorType::eStorageImage;
+    poolSize.descriptorCount = static_cast<uint32_t>(swapChainImages.size());
 
     vk::DescriptorPoolCreateInfo poolInfo{}; // VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO
     poolInfo.sType = vk::StructureType::eDescriptorPoolCreateInfo;
-    poolInfo.poolSizeCount = pool_sizes.size();
-    poolInfo.pPoolSizes = pool_sizes.data();
+    poolInfo.poolSizeCount = 1;
+    poolInfo.pPoolSizes = &poolSize;
     poolInfo.maxSets = static_cast<uint32_t>(swapChainImages.size());
     if (device_.createDescriptorPool(&poolInfo, nullptr, &descriptorPool) != vk::Result::eSuccess)
     {
-        throw EXCEPTION("Failed to create descriptor pool");
+        throw std::runtime_error("failed to create descriptor pool!");
     }
 }
 
@@ -605,18 +597,20 @@ void VulkanInstance::createDescriptorSets()
 
     for (size_t i = 0; i < swapChainImages.size(); i++) // eroare pentru andrei aici :)
     {
-        vk::DescriptorImageInfo sampler_info{};
-        sampler_info.imageView = swapChainImageViews[i]; // VK_IMAGE_LAYOUT_GENERAL
-        sampler_info.imageLayout = vk::ImageLayout::eGeneral;
-        sampler_info.sampler = imageSampler;
-        vk::DescriptorBufferInfo buffer_info;
-        buffer_info.buffer = local_buffer_.buffer;
+        vk::DescriptorImageInfo info{};
+        info.imageView = swapChainImageViews[i]; // VK_IMAGE_LAYOUT_GENERAL
+        info.imageLayout = vk::ImageLayout::eGeneral;
+        info.sampler = imageSampler;
 
-        std::vector<vk::WriteDescriptorSet> write_descriptor_sets;
-        write_descriptor_sets.push_back(vk::WriteDescriptorSet{descriptorSets[i], 0, 0, vk::DescriptorType::eStorageImage, sampler_info, nullptr, nullptr, nullptr});
-        write_descriptor_sets.push_back(vk::WriteDescriptorSet{descriptorSets[i], 1, 0, vk::DescriptorType::eStorageBuffer, nullptr, buffer_info, nullptr, nullptr});
+        vk::WriteDescriptorSet descriptorWrite{}; // VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET
+        descriptorWrite.dstSet = descriptorSets[i];
+        descriptorWrite.dstBinding = 0;
+        descriptorWrite.dstArrayElement = 0; // VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
+        descriptorWrite.descriptorType = vk::DescriptorType::eStorageImage;
+        descriptorWrite.descriptorCount = 1;
+        descriptorWrite.pImageInfo = &info;
 
-        device_.updateDescriptorSets(write_descriptor_sets.size(), write_descriptor_sets.data(), 0, nullptr);
+        device_.updateDescriptorSets(1, &descriptorWrite, 0, nullptr);
     }
 }
 
@@ -655,26 +649,33 @@ void VulkanInstance::createCommandBuffers()
                            vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead,
                            vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAllCommands);
 
+        /* VkImageCopy copy{};
+        copy.dstOffset = { 0,0,0 };
+        copy.extent = { swapChainExtent.width, swapChainExtent.height,1};
+        copy.srcOffset = { 0,0,0 };
+        VkImageSubresourceLayers subresource{};
+        subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        subresource.baseArrayLayer = 0;
+        subresource.layerCount = 1;
+        subresource.mipLevel = 0;
+        copy.srcSubresource = subresource;
+        copy.dstSubresource = subresource;
+        //stai ca cred ca stiu
+        recordImageBarrier(commandBuffers[i], swapChainImages[i],
+            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_HOST_BIT);
+        vkCmdCopyImage(commandBuffers[i], renderTargetImages[i], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            swapChainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,1,©);
+        recordImageBarrier(commandBuffers[i], swapChainImages[i],
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
+            VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+            */
         commandBuffers[i].end();
     }
 }
-void VulkanInstance::createBuffer()
-{
-    vk::BufferCreateInfo buffer_create_info;
-    buffer_create_info.size = 65536;
-    buffer_create_info.usage = vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc;
-    VmaAllocationCreateInfo allocation_info = {};
-    allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
-    allocation_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-    VkResult result;
-    if((result=vmaCreateBuffer(allocator_, reinterpret_cast<VkBufferCreateInfo *>(&buffer_create_info), &allocation_info, reinterpret_cast<VkBuffer *>(&staging_buffer_.buffer), &staging_buffer_.allocation, nullptr))!=VK_SUCCESS)
-        throw EXCEPTION("Failed to create staging buffer", result);
-    buffer_create_info.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer;
-    allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
-    allocation_info.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    if((result=vmaCreateBuffer(allocator_, reinterpret_cast<VkBufferCreateInfo *>(&buffer_create_info), &allocation_info, reinterpret_cast<VkBuffer *>(&local_buffer_.buffer), &local_buffer_.allocation, nullptr))!=VK_SUCCESS)
-        throw EXCEPTION("Failed to create local buffer", result);
-}
+
 void VulkanInstance::createSyncObjects()
 {
     imageAvailableSemaphores.resize(maxFrames);
