@@ -16,6 +16,7 @@
 #include <stack>
 #include <thread>
 #include <mutex>
+#include <strstream>
 
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.h>
@@ -37,6 +38,7 @@
 #include "materials.hpp"
 #include "lights.hpp"
 #include "objectCollection.hpp"
+#include "utils.hpp"
 
 #define MULTITHREADED
 

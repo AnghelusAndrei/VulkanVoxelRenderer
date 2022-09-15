@@ -30,20 +30,7 @@ void Octree::upload(){
     //
 }
 
-glm::vec3 Octree::GetVNormal(glm::uvec3 data){
-    glm::vec3 normal;
-    normal.x = (data.x>>8)/100 - 100;
-    normal.y = (data.y>>8)/100 - 100;
-    normal.z = (data.z>>8)/100 - 100;
-}
 
-glm::uvec3 Octree::SetVNormal(glm::vec3 normal){
-    glm::vec3 data;
-    data.x += (uint8_t)(normal.x*100 + 100)<<8;
-    data.y += (uint8_t)(normal.y*100 + 100)<<8;
-    data.z += (uint8_t)(normal.z*100 + 100)<<8;
-    return normal;
-}
 
 void Octree::Insert(glm::uvec3 pos, glm::uvec3 data, uint32_t object_id){
     uint32_t d=1;

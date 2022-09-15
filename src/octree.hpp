@@ -27,9 +27,7 @@ class Octree{
         Octree::leaf Lookup(glm::uvec3 pos);
 
         void upload();
-    public:
-        glm::vec3 GetVNormal(glm::uvec3 data);
-        glm::uvec3 SetVNormal(glm::vec3 data);
+        
     public:
         enum Enums{
             LEAF  = 0,

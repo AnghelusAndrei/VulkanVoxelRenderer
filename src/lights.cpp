@@ -10,5 +10,5 @@ LightCollection::~LightCollection(){
 
 void LightCollection::add(Light *m){
     m->id = collection.size();
-    collection.push_back(*m);
+    collection.push_back(m);
 }

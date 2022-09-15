@@ -1,5 +1,10 @@
 #include "../src/voxelengine.hpp"
 
+struct VoxelEngine::globals_t
+{
+    /* data */
+};
+
 void VoxelEngine::Setup(){
     VoxelEngine::config = {
         800,
@@ -18,11 +23,11 @@ void VoxelEngine::Setup(){
     Object a(octree, glm::vec3(0,0,0), glm::vec3(0,0,0), glm::vec3(1,1,1));
     a.loadWavefrontObj("file", false, false);
     
-    MaterialCollection::Material m1{
-        //data
+    MaterialCollection::Material m1 = {
+        /* data */
     };
-    LightCollection::Light l1{
-        //data
+    LightCollection::Light l1 = {
+        /* data */
     };
 
     materials->add(&m1);

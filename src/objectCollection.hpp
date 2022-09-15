@@ -10,9 +10,10 @@ public:
     ~ObjectCollection();
 
     void add(Object *m, uint32_t materialId);
+    Object *get(uint32_t objectId);
 
 public:
-    std::vector<Object> collection;
+    std::vector<Object*> collection;
     std::vector<uint32_t> mIdCollection;
 
 private:

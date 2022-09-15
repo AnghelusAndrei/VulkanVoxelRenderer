@@ -18,7 +18,7 @@ public:
     void add(Light *m);//returns id
 
 public:
-    std::vector<Light> collection;
+    std::vector<Light*> collection;
 private:
 
 };

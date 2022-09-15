@@ -37,6 +37,8 @@ public:
     MaterialCollection *materials;
     LightCollection *lights;
     ObjectCollection *objects;
+
+    struct globals_t;
     
 private:
     VulkanInstance *instance_p;
