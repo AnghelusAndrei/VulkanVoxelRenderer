@@ -18,7 +18,7 @@ void VoxelEngine::run()
             glfwPollEvents();
             instance_->render();
         }
-    instance_->base.device.waitIdle();
+    instance_->device_.waitIdle();
 }
 void VoxelEngine::framebuffer_resized(GLFWwindow* window, int width, int height)
 {
