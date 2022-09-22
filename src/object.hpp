@@ -3,25 +3,27 @@
 
 #include "vulkaninstance.hpp"
 
+class utils;
 class Octree;
 class Object{
 public:
-    Object(Octree *octree, glm::uvec3 position_, glm::uvec2 rotation_, glm::uvec3 scale_);
+    Object(Octree *octree, glm::uvec3 position_, glm::uvec2 rotation_, glm::vec3 scale_);
     ~Object();
     bool loadWavefrontObj(std::string filename, bool hasTexture, bool hasNormal);
 
     void update();
+    void custom(void (*customVoxelIntruction)(uint32_t voxel_Id, Octree *octree));
     void remove();
 public:
     glm::uvec3 position;
     glm::uvec2 rotation;
-    glm::uvec3 scale;
+    glm::vec3 scale;
     uint16_t id;
 private:
     std::vector<glm::uvec3> voxels_p; //position
     std::vector<glm::uvec3> voxels_data_p; //normal & albedo
     std::vector<glm::vec3> normals_p; //normal
-    utils Utils;
+    utils *Utils;
     Octree *octree_p;
 
     const glm::vec3 upVector = glm::vec3(0,1,0);

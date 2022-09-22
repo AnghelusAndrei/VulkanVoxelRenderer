@@ -1,7 +1,6 @@
 #include "object.hpp"
 
-Object::Object(Octree *octree, glm::uvec3 position_, glm::uvec2 rotation_, glm::uvec3 scale_) : octree_p(octree), position(position_), rotation(rotation_), scale(scale_){
-
+Object::Object(Octree *octree, glm::uvec3 position_, glm::uvec2 rotation_, glm::vec3 scale_) : octree_p(octree), position(position_), rotation(rotation_), scale(scale_), Utils(new utils){
 }
 
 Object::~Object(){
@@ -15,16 +14,18 @@ void Object::update(){
         glm::uvec2 normalRot;
         glm::vec3 rawVoxel; // direction of voxel
         glm::uvec2 voxelRot;
+        glm::vec3 fvoxel;
 
 
-        normal = Utils.GetVNormal(voxels_data_p[i]); voxels_data_p[i] = Utils.RemoveNormal(voxels_data_p[i]);
-        normalRot = Utils.vectorToEuler(normal) - oldRotation_p + rotation;
-        normal = Utils.eulerToVector(normalRot); voxels_data_p[i] = Utils.AddNormal(voxels_data_p[i], Utils.SetVNormal(normal));
+        normal = Utils->GetVNormal(voxels_data_p[i]); voxels_data_p[i] = Utils->RemoveNormal(voxels_data_p[i]);
+        normalRot = Utils->vectorToEuler(normal) - oldRotation_p + rotation;
+        normal = Utils->eulerToVector(normalRot); voxels_data_p[i] = Utils->AddNormal(voxels_data_p[i], Utils->SetVNormal(normal));
 
-
-        rawVoxel = GetRaw(voxels_p[i]);
-        voxelRot = Utils.vectorToEuler(rawVoxel) - oldRotation_p + rotation;
-        rawVoxel = Utils.eulerToVector(voxelRot); newVoxel = SetCurrent(voxels_p[i]);
+        fvoxel = glm::vec3(voxels_p[i]);
+        float vlength = glm::length(fvoxel);
+        rawVoxel = glm::normalize(fvoxel);
+        voxelRot = Utils->vectorToEuler(rawVoxel) - oldRotation_p + rotation;
+        rawVoxel = Utils->eulerToVector(voxelRot) * vlength; newVoxel = SetCurrent(voxels_p[i]);
 
         newVoxel -= oldPosition_p;
         newVoxel += position;
@@ -34,6 +35,13 @@ void Object::update(){
         oldPosition_p = position;
     }
     octree_p->upToDate = false;
+}
+
+void Object::custom(void (*customVoxelIntruction)(uint32_t voxel_Id, Octree *octree))
+{
+    for(int i = 0; i<voxels_p.size(); i++){
+        customVoxelIntruction(i, octree_p);
+    }
 }
 
 void Object::remove(){
@@ -84,7 +92,8 @@ bool Object::loadWavefrontObj(std::string filename, bool hasTexture, bool hasNor
 			}
             else if(line[1] == 'n'){
 				glm::vec3 v;
-				s >> junk >> junk >> v.x >> v.y;
+				s >> junk >> v.x >> v.y >> v.z;
+                normals.push_back(v);
             }
 			else
 			{
@@ -92,9 +101,9 @@ bool Object::loadWavefrontObj(std::string filename, bool hasTexture, bool hasNor
 				s >> junk >> v.x >> v.y >> v.z;
 				verts.push_back(v);
 
-                //if(!hasNormal){
+                if(!hasNormal){
                     normals.push_back(glm::vec3(0,0,0));
-                //}
+                }
 
                 if(v.x > BoundingBox_p.MAX.x)BoundingBox_p.MAX.x = v.x;
                 if(v.y > BoundingBox_p.MAX.y)BoundingBox_p.MAX.y = v.y;
@@ -143,16 +152,16 @@ bool Object::loadWavefrontObj(std::string filename, bool hasTexture, bool hasNor
                     tr.v[1] = verts[stoi(tokens[2]) - 1];
                     tr.v[2] = verts[stoi(tokens[4]) - 1];
                     
-                    //tr.normal[0] = normals[stoi(tokens[1]) - 1];
-                    //tr.normal[1] = normals[stoi(tokens[3]) - 1];
-                    //tr.normal[2] = normals[stoi(tokens[5]) - 1];
+                    tr.normal[0] = normals[stoi(tokens[1]) - 1];
+                    tr.normal[1] = normals[stoi(tokens[3]) - 1];
+                    tr.normal[2] = normals[stoi(tokens[5]) - 1];
 
                     tr.vertex_id[0] = stoi(tokens[0]) - 1;
                     tr.vertex_id[1] = stoi(tokens[2]) - 1;
                     tr.vertex_id[2] = stoi(tokens[4]) - 1;
                 }
 
-                //if(!bHasNormal){
+                if(!hasNormal){
                     glm::vec3 line1 = tr.v[1] - tr.v[0];
                     glm::vec3 line2 = tr.v[2] - tr.v[0];
                     glm::vec3 line3 = tr.v[2] - tr.v[1];
@@ -162,7 +171,7 @@ bool Object::loadWavefrontObj(std::string filename, bool hasTexture, bool hasNor
                     normals[tr.vertex_id[0]] +=  normal;
                     normals[tr.vertex_id[1]] +=  normal;
                     normals[tr.vertex_id[2]] +=  normal;
-                //}
+                }
 
                 tris.push_back(tr);
 			}
@@ -224,16 +233,16 @@ bool Object::loadWavefrontObj(std::string filename, bool hasTexture, bool hasNor
                     tr.t[1] = texs[stoi(tokens[4]) - 1];
                     tr.t[2] = texs[stoi(tokens[7]) - 1];
                     
-                    //tr.normal[0] = normals[stoi(tokens[2]) - 1];
-                    //tr.normal[1] = normals[stoi(tokens[5]) - 1];
-                    //tr.normal[2] = normals[stoi(tokens[8]) - 1];
+                    tr.normal[0] = normals[stoi(tokens[2]) - 1];
+                    tr.normal[1] = normals[stoi(tokens[5]) - 1];
+                    tr.normal[2] = normals[stoi(tokens[8]) - 1];
 
                     tr.vertex_id[0] = stoi(tokens[0]) - 1;
                     tr.vertex_id[1] = stoi(tokens[3]) - 1;
                     tr.vertex_id[2] = stoi(tokens[6]) - 1;
                 }
 
-                //if(!hasNormal){
+                if(!hasNormal){
                     glm::vec3 line1 = tr.v[1] - tr.v[0];
                     glm::vec3 line2 = tr.v[2] - tr.v[0];
                     glm::vec3 line3 = tr.v[2] - tr.v[1];
@@ -243,7 +252,7 @@ bool Object::loadWavefrontObj(std::string filename, bool hasTexture, bool hasNor
                     normals[tr.vertex_id[0]] +=  normal;
                     normals[tr.vertex_id[1]] +=  normal;
                     normals[tr.vertex_id[2]] +=  normal;
-                //}
+                }
 
 
                 tris.push_back(tr);
@@ -253,13 +262,20 @@ bool Object::loadWavefrontObj(std::string filename, bool hasTexture, bool hasNor
 
     for(int i = 0; i < tris.size(); i++){
         for(int j = 0; j < 3; j++){
-            //if(!hasNormal){
+            if(!hasNormal){
                 if(glm::length(normals[tris[i].vertex_id[j]]) != 0){
                     tris[i].normal[j] = glm::normalize(normals[tris[i].vertex_id[j]]);
                 }
-            //}else{
-            //    tris[i].normal[j] = tris[i].normal[j].normalization();
-            //}
+            }else{
+                tris[i].normal[j] = glm::normalize(tris[i].normal[j]);
+            }
+
+            float vlength = glm::length(tris[i].v[j]);
+            glm::uvec2 voxelRot;
+            tris[i].v[j] = glm::normalize(tris[i].v[j]);
+            voxelRot = Utils->vectorToEuler(tris[i].v[j]) - oldRotation_p + rotation;
+            tris[i].v[j] = Utils->eulerToVector(voxelRot) * vlength;
+            tris[i].v[j] = (tris[i].v[j] - BoundingBox_p.MIN) * scale + glm::vec3(position);
         }
 
         Rasterize(tris[i]);

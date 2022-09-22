@@ -42,113 +42,105 @@
 
 #define MULTITHREADED
 
+/**
+ * @brief Represents all rendering infrastructure
+ * 
+ */
 class VoxelEngine;
-class VulkanInstance
-{
+class VulkanInstance {
 public:
     VulkanInstance(VoxelEngine *engine);
     void render();
     ~VulkanInstance();
 
-public:
-    
-
 private:
-    void createInstance();
-    void createSurface();
-    void pickPhysicalDevice();
-    void createLogicalDevice();
-    void createSwapChain();
-    void createImageViews();
-    void createDescriptorSetLayout();
-    void createComputePipeline();
-    void createCommandPool();
-    void createDescriptorPool();
-    void createDescriptorSets();
-    void createCommandBuffers();
-    void createSyncObjects();
-    void recreateSwapChain();
-private:
-    VoxelEngine *engine_;
-    struct QueueFamilyIndices
-    {
-        std::optional<uint32_t> computeFamily;
-        std::optional<uint32_t> presentFamily;
 
-        bool isComplete()
-        {
-            return presentFamily.has_value()&&computeFamily.has_value();
-        }
+    struct VmaBuffer {
+        vk::Buffer buffer;
+        VmaAllocation allocation;
     };
 
+    struct QueueSupportDetails {
+        std::optional<uint32_t> computeFamily;
+        std::optional<uint32_t> presentFamily;
+        bool hasValues()
+        {
+            return computeFamily.has_value() && presentFamily.has_value();   
+        }
+    };
     struct SwapChainSupportDetails
     {
         vk::SurfaceCapabilitiesKHR capabilities;
-        std::vector<vk::SurfaceFormatKHR> formats;
-        std::vector<vk::PresentModeKHR> presentModes;
+        vk::SurfaceFormatKHR format = vk::Format::eUndefined;
+        vk::PresentModeKHR presentMode = vk::PresentModeKHR::eFifo;
+        vk::Extent2D extent;
     };
 
-    QueueFamilyIndices findQueueFamilies();
-    SwapChainSupportDetails querySwapChainSupport();
-    vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
-    vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);
-    vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
-    void recordImageBarrier(vk::CommandBuffer buffer, vk::Image image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
-    vk::AccessFlags scrAccess, vk::AccessFlags dstAccess, vk::PipelineStageFlags srcBind, vk::PipelineStageFlags dstBind);
-    vk::ShaderModule createShaderModule(const std::vector<char>& code);
-    static std::vector<char> readFile(const std::string& filename);
+    struct RaycastSpecialization 
+    {
+        uint32_t window_width, window_height;
+    };
+    
+    struct LightingSpecialization 
+    {
+        
+    };
 
-    const std::vector<const char *> validationLayers = {
-        "VK_LAYER_KHRONOS_validation"};
-
-    const std::vector<const char *> deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-
-    #ifdef NDEBUG
-        const bool enableValidationLayers = false;
-    #else
-        const bool enableValidationLayers = true;
-    #endif
+    struct RenderSpecialization 
+    {
+        
+    };
+    struct SpecializationConstants 
+    {
+        RaycastSpecialization raycast;
+        LightingSpecialization lighting;
+        RenderSpecialization render;
+    };
+    VoxelEngine *engine_;
     vk::Instance instance_;
-    vk::DebugUtilsMessengerEXT debug_messenger_;
+    vk::DispatchLoaderDynamic dispatch_;
+    vk::DebugUtilsMessengerEXT debugMessenger_;
+    vk::PhysicalDevice physicalDevice_;
     vk::SurfaceKHR surface_;
-    vk::DispatchLoaderDynamic dldy_;
-    vk::PhysicalDevice physical_device_;
     vk::Device device_;
-    vk::DescriptorSetLayout descriptorSetLayout;
-    vk::DescriptorPool descriptorPool;
-    std::vector<vk::DescriptorSet> descriptorSets;
-    vk::Sampler imageSampler;
-    vk::Pipeline pipeline;
+    vk::Queue presentQueue_, computeQueue_;
+    VmaAllocator allocator_;
+    vk::CommandPool commandPool_;
+    vk::DescriptorPool raycastPool_, lightingPool_, renderPool_;
+    VmaBuffer stagingBuffer_, octreeBuffer_, lightingBuffer_;
+    std::vector<vk::Semaphore> imageAvailableSemaphores_, renderFinishedSemaphores_;
+    std::vector<vk::Fence> inFlightFences_, imagesInFlightFences_;
+    size_t currentFrame_=0;
+    const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
-    vk::Queue graphicsQueue;
-    vk::Queue presentQueue;
-    vk::Queue computeQueue;
-
-    vk::SwapchainKHR swapChain;
-    std::vector<vk::Image> swapChainImages;
-    vk::Format swapChainImageFormat;
-    vk::Extent2D swapChainExtent;
-    std::vector<vk::ImageView> swapChainImageViews;
-    std::vector<vk::Framebuffer> swapChainFramebuffers;
-
-    vk::RenderPass renderPass;
-    vk::PipelineLayout pipelineLayout;
-    vk::Pipeline graphicsPipeline;
-
-    vk::CommandPool commandPool;
-    std::vector<vk::CommandBuffer> commandBuffers;
-    vk::Buffer buffer_;
-    std::vector<vk::Semaphore> imageAvailableSemaphores;
-    std::vector<vk::Semaphore> renderFinishedSemaphores;
-    std::vector<vk::Fence> inFlightFences;
-    std::vector<vk::Fence> imagesInFlight;
-    uint32_t currentFrame = 0;
-    uint32_t maxFrames = 2;
-    void cleanupSwapChain();
-    bool framebufferResized = false;
+    vk::SwapchainKHR swapChain_;
+    std::vector<vk::Image> images_;
+    std::vector<vk::ImageView> imageViews_;
+    vk::Sampler imageSampler_;
+    vk::DescriptorSetLayout raycastSetLayout_, lightingSetLayout_, renderSetLayout_;
+    std::vector<vk::DescriptorSet> raycastDescriptorSets_, lightingDescriptorSets_, renderDescriptorSets_;  
+    vk::PipelineLayout raycastPipelineLayout_, lightingPipelineLayout_, renderPipelineLayout_;
+    vk::Pipeline raycastPipeline_, lightingPipeline_, renderPipeline_;
+    std::vector<vk::CommandBuffer> commandBuffers_, copyCommandBuffers_; 
+    std::vector<std::vector<vk::DescriptorSet>> jointDescriptorSets_;
+    void createInstance();
+    void selectPhysicalDevice(); 
+    void createPermanentObjects();
+    void createSwapchainObjects();
+    void setupFrameObjects();
 
 
-
+    QueueSupportDetails utils_getQueueSupportDetails();
+    vk::DescriptorPool utils_createDescriptorPool(std::vector<vk::DescriptorType> descriptorTypes);
+    VmaBuffer utils_createBuffer(vk::DeviceSize size, vk::BufferUsageFlags bufferUsage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags);
+    SwapChainSupportDetails utils_getSwapChainSupportDetails();
+    vk::DescriptorSetLayout utils_createDescriptorSetLayout(std::vector<vk::DescriptorSetLayoutBinding> bindings);
+    std::vector<vk::DescriptorSet> utils_allocateDescriptorSets(vk::DescriptorPool pool, vk::DescriptorSetLayout layout);
+    vk::ShaderModule utils_createShaderModule(std::string path);
+    const std::vector<const char *> utils_validationLayers = {
+        "VK_LAYER_KHRONOS_validation"};
+    const std::vector<const char*> utils_deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
     friend class VoxelEngine;
-};
+};  

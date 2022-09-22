@@ -1,18 +1,15 @@
 #include "../src/voxelengine.hpp"
 
-struct VoxelEngine::globals_t
-{
-    /* data */
-};
 
 void VoxelEngine::Setup(){
-    VoxelEngine::config = {
-        800,
-        600,
-        "VulkanVoxelRenderer",
-        true
-    };
+    
+    config.window_width = 800;
+    config.window_height = 6800;
+    config.window_title = "VulkanVoxelRenderer";
+    config.debugging_enabled = true;
+
     VoxelEngine::CreateWindow();
+    
     VoxelEngine::octree->Setup(9);
     Camera::Properties camProperties = {
         .FOV = 90,

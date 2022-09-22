@@ -27,7 +27,7 @@ add_subdirectory(lib/VulkanMemoryAllocator)
 file(GLOB SOURCES "src/*.cpp" "usr/*.cpp")
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-file(GLOB SHADERS "src/*.comp")
+file(GLOB SHADERS "src/shaders/*.comp")
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/shaders")
 
 find_program(GLSLC "glslc")

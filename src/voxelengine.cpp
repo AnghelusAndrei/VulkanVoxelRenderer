@@ -1,15 +1,9 @@
 #include "voxelengine.hpp"
 
-VoxelEngine::VoxelEngine()
+VoxelEngine::VoxelEngine() : octree(new Octree), camera(new Camera), lights(new LightCollection), materials(new MaterialCollection), objects(new ObjectCollection)
 {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // We specify the window hint in order for GLFW to not create by default a OpenGL context
-
-    octree = new Octree();
-    camera = new Camera();
-    lights = new LightCollection();
-    materials = new MaterialCollection();
-    objects = new ObjectCollection();
 
     Setup();
 

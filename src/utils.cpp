@@ -31,9 +31,9 @@ glm::uvec3 utils::AddNormal(glm::uvec3 data, glm::uvec3 normalData){
 
 glm::vec3 utils::eulerToVector(glm::uvec2 rotation){
     glm::vec3 vec;
-    vec.x = cosf(glm::radians(rotation.x))*cosf(glm::radians(rotation.y));
-    vec.y = sinf(glm::radians(rotation.x))*cosf(glm::radians(rotation.y));
-    vec.z = sinf(glm::radians(rotation.y));
+    vec.x = cosf(glm::radians((float)rotation.x))*cosf(glm::radians((float)rotation.y));
+    vec.y = sinf(glm::radians((float)rotation.x))*cosf(glm::radians((float)rotation.y));
+    vec.z = sinf(glm::radians((float)rotation.y));
     return vec;
 }
 

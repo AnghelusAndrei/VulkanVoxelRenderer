@@ -13,3 +13,7 @@ void ObjectCollection::add(Object *m, uint32_t materialId){
     collection.push_back(m);
     mIdCollection.push_back(materialId);
 }
+
+Object* ObjectCollection::get(uint32_t objectId){
+    return collection[objectId];
+}   
