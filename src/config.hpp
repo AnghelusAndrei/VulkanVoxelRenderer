@@ -4,8 +4,8 @@
 #include <string>
 
 struct Config {
-    int window_width;
-    int window_height;
+    uint32_t window_width;
+    uint32_t window_height;
     std::string window_title;   
     bool debugging_enabled;
 };

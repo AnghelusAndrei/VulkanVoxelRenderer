@@ -80,7 +80,7 @@ void VulkanInstance::render()
         throw EXCEPTION("Failed to present swap chain image");
     }
 
-    currentFrame_ = (currentFrame_ + 1) % MAX_FRAMES_IN_FLIGHT;
+    currentFrame_ = (currentFrame_ + 1) % engine_->config_.MAX_FRAMES_IN_FLIGHT;
 }
 
 VulkanInstance::~VulkanInstance()
@@ -188,7 +188,7 @@ void VulkanInstance::createPermanentObjects()
     vk::Result result;
 
     VkSurfaceKHR surface;
-    if ((result = (vk::Result)glfwCreateWindowSurface(instance_, engine_->window, nullptr, &surface)) != vk::Result::eSuccess)
+    if ((result = (vk::Result)glfwCreateWindowSurface(instance_, engine_->window_, nullptr, &surface)) != vk::Result::eSuccess)
     {
         throw EXCEPTION("Failed to create window surface!", result);
     }
@@ -519,7 +519,7 @@ void VulkanInstance::createSwapchainObjects()
                                                {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, raycastPipeline_);
         commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, raycastPipelineLayout_, 0, 1, &raycastDescriptorSets_[i], 0, nullptr);
-        commandBuffers_[i].dispatch(engine_->config.window_width / 16 + 1, engine_->config.window_height / 16 + 1, 1); // TODO
+        commandBuffers_[i].dispatch(engine_->config_.window_width / 16 + 1, engine_->config_.window_height / 16 + 1, 1); // TODO
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
@@ -538,7 +538,7 @@ void VulkanInstance::createSwapchainObjects()
 
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, renderPipeline_);
         commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, renderPipelineLayout_, 0, 1, &renderDescriptorSets_[i], 0, nullptr);
-        commandBuffers_[i].dispatch(engine_->config.window_width / 16 + 1, engine_->config.window_height / 16 + 1, 1); // TODO
+        commandBuffers_[i].dispatch(engine_->config_.window_width / 16 + 1, engine_->config_.window_height / 16 + 1, 1); // TODO
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{}, std::vector<vk::ImageMemoryBarrier>{{vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
@@ -559,7 +559,7 @@ void VulkanInstance::createSwapchainObjects()
                                                {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i-images_.size()], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, raycastPipeline_);
         commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, raycastPipelineLayout_, 0, 1, &raycastDescriptorSets_[i-images_.size()], 0, nullptr);
-        commandBuffers_[i].dispatch(engine_->config.window_width / 16 + 1, engine_->config.window_height / 16 + 1, 1); // TODO
+        commandBuffers_[i].dispatch(engine_->config_.window_width / 16 + 1, engine_->config_.window_height / 16 + 1, 1); // TODO
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
@@ -578,7 +578,7 @@ void VulkanInstance::createSwapchainObjects()
 
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, renderPipeline_);
         commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, renderPipelineLayout_, 0, 1, &renderDescriptorSets_[i-images_.size()], 0, nullptr);
-        commandBuffers_[i].dispatch(engine_->config.window_width / 16 + 1, engine_->config.window_height / 16 + 1, 1); // TODO
+        commandBuffers_[i].dispatch(engine_->config_.window_width / 16 + 1, engine_->config_.window_height / 16 + 1, 1); // TODO
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{}, std::vector<vk::ImageMemoryBarrier>{{vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i-images_.size()], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
@@ -586,16 +586,16 @@ void VulkanInstance::createSwapchainObjects()
         commandBuffers_[i].end();
     }
     LOGGING->info() << "Created command buffers" << std::endl;
-    imageAvailableSemaphores_.resize(MAX_FRAMES_IN_FLIGHT);
-    renderFinishedSemaphores_.resize(MAX_FRAMES_IN_FLIGHT);
-    inFlightFences_.resize(MAX_FRAMES_IN_FLIGHT);
+    imageAvailableSemaphores_.resize(engine_->config_.MAX_FRAMES_IN_FLIGHT);
+    renderFinishedSemaphores_.resize(engine_->config_.MAX_FRAMES_IN_FLIGHT);
+    inFlightFences_.resize(engine_->config_.MAX_FRAMES_IN_FLIGHT);
     imagesInFlightFences_.resize(images_.size(), vk::Fence{});
 
     vk::SemaphoreCreateInfo semaphoreCreateInfo{};
 
     vk::FenceCreateInfo fenceCreateInfo{vk::FenceCreateFlagBits::eSignaled};
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    for (size_t i = 0; i < engine_->config_.MAX_FRAMES_IN_FLIGHT; i++)
     {
         if (device_.createSemaphore(&semaphoreCreateInfo, nullptr, &imageAvailableSemaphores_[i]) != vk::Result::eSuccess ||
             device_.createSemaphore(&semaphoreCreateInfo, nullptr, &renderFinishedSemaphores_[i]) != vk::Result::eSuccess ||
@@ -640,7 +640,7 @@ vk::DescriptorPool VulkanInstance::utils_createDescriptorPool(std::vector<vk::De
     std::vector<vk::DescriptorPoolSize> pool_sizes;
     for (vk::DescriptorType type : descriptorTypes)
     {
-        pool_sizes.push_back(vk::DescriptorPoolSize{type, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT)});
+        pool_sizes.push_back(vk::DescriptorPoolSize{type, static_cast<uint32_t>(engine_->config_.MAX_FRAMES_IN_FLIGHT)});
     }
     vk::DescriptorPoolCreateInfo poolCreateInfo{};
     poolCreateInfo.poolSizeCount = pool_sizes.size();
@@ -712,8 +712,8 @@ VulkanInstance::SwapChainSupportDetails VulkanInstance::utils_getSwapChainSuppor
         supportDetails.presentMode = vk::PresentModeKHR::eFifo;
 
     supportDetails.extent = vk::Extent2D{
-        engine_->config.window_width,
-        engine_->config.window_height};
+        engine_->config_.window_width,
+        engine_->config_.window_height};
 
     supportDetails.extent.width = std::clamp(supportDetails.extent.width, supportDetails.capabilities.minImageExtent.width, supportDetails.capabilities.maxImageExtent.width);
     supportDetails.extent.height = std::clamp(supportDetails.extent.height, supportDetails.capabilities.minImageExtent.height, supportDetails.capabilities.maxImageExtent.height);

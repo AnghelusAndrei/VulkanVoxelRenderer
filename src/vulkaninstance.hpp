@@ -1,5 +1,6 @@
 #pragma once
 
+
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
@@ -111,7 +112,6 @@ private:
     std::vector<vk::Semaphore> imageAvailableSemaphores_, renderFinishedSemaphores_;
     std::vector<vk::Fence> inFlightFences_, imagesInFlightFences_;
     size_t currentFrame_=0;
-    const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
     vk::SwapchainKHR swapChain_;
     std::vector<vk::Image> images_;
