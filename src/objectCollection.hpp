@@ -2,7 +2,7 @@
 #define OBJECTCOLLECTION_HPP
 
 #include "vulkaninstance.hpp"
-
+#include "object.hpp"
 class Object;
 class ObjectCollection{
 public:

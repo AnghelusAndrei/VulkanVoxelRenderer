@@ -17,7 +17,6 @@
 #include <stack>
 #include <thread>
 #include <mutex>
-#include <strstream>
 
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.h>
@@ -35,10 +34,10 @@
 #include "octree.hpp"
 #include "camera.hpp"
 #include "stats.hpp"
-#include "object.hpp"
+//#include "object.hpp"
 #include "materials.hpp"
 #include "lights.hpp"
-#include "objectCollection.hpp"
+//#include "objectCollection.hpp"
 #include "utils.hpp"
 
 #define MULTITHREADED
@@ -53,7 +52,7 @@ public:
     VulkanInstance(VoxelEngine *engine);
     void render();
     ~VulkanInstance();
-
+    void update();
 private:
 
     struct VmaBuffer {
@@ -106,13 +105,12 @@ private:
     vk::Device device_;
     vk::Queue presentQueue_, computeQueue_;
     VmaAllocator allocator_;
-    vk::CommandPool commandPool_;
-    vk::DescriptorPool raycastPool_, lightingPool_, renderPool_;
     VmaBuffer stagingBuffer_, octreeBuffer_, lightingBuffer_;
-    std::vector<vk::Semaphore> imageAvailableSemaphores_, renderFinishedSemaphores_;
-    std::vector<vk::Fence> inFlightFences_, imagesInFlightFences_;
+    
     size_t currentFrame_=0;
 
+    vk::CommandPool commandPool_;
+    vk::DescriptorPool raycastPool_, lightingPool_, renderPool_;
     vk::SwapchainKHR swapChain_;
     std::vector<vk::Image> images_;
     std::vector<vk::ImageView> imageViews_;
@@ -121,8 +119,11 @@ private:
     std::vector<vk::DescriptorSet> raycastDescriptorSets_, lightingDescriptorSets_, renderDescriptorSets_;  
     vk::PipelineLayout raycastPipelineLayout_, lightingPipelineLayout_, renderPipelineLayout_;
     vk::Pipeline raycastPipeline_, lightingPipeline_, renderPipeline_;
-    std::vector<vk::CommandBuffer> commandBuffers_, copyCommandBuffers_; 
+    std::vector<vk::CommandBuffer> commandBuffers_; 
     std::vector<std::vector<vk::DescriptorSet>> jointDescriptorSets_;
+    std::vector<vk::Semaphore> imageAvailableSemaphores_, renderFinishedSemaphores_;
+    std::vector<vk::Fence> inFlightFences_, imagesInFlightFences_;
+    
     void createInstance();
     void selectPhysicalDevice(); 
     void createPermanentObjects();
@@ -137,6 +138,7 @@ private:
     vk::DescriptorSetLayout utils_createDescriptorSetLayout(std::vector<vk::DescriptorSetLayoutBinding> bindings);
     std::vector<vk::DescriptorSet> utils_allocateDescriptorSets(vk::DescriptorPool pool, vk::DescriptorSetLayout layout);
     vk::ShaderModule utils_createShaderModule(std::string path);
+    void utils_destroyBuffer(VmaBuffer buffer);
     const std::vector<const char *> utils_validationLayers = {
         "VK_LAYER_KHRONOS_validation"};
     const std::vector<const char*> utils_deviceExtensions = {

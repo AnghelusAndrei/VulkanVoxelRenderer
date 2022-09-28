@@ -77,7 +77,7 @@ bool Object::loadWavefrontObj(std::string filename, bool hasTexture, bool hasNor
 		char line[128];
 		f.getline(line, 128);
 
-		std::stringstream s;
+		std::strstream s;
 		s << line;
 
 		char junk;

@@ -3,8 +3,8 @@
 #include <GLFW/glfw3.h>
 #include "config.hpp"
 #include "stats.hpp"
+#include "objectCollection.hpp"
 #include "vulkaninstance.hpp"
-
 class Object;
 class Octree;
 class Camera;
@@ -39,9 +39,12 @@ public:
     ObjectCollection *objects;
     
 private:
-    VulkanInstance *instance_p;
+    VulkanInstance *instance_;
     int maxThreads_p;
 
+    void renderT_();
     static void framebuffer_resized(GLFWwindow *window_, int width, int height);
+    static void window_maximized(GLFWwindow *window_, int maximized);
+    
     friend class VulkanInstance;
 };

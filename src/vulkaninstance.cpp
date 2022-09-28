@@ -20,8 +20,7 @@ void VulkanInstance::render()
     vk::Result result = device_.acquireNextImageKHR(swapChain_, UINT64_MAX, imageAvailableSemaphores_[currentFrame_], VK_NULL_HANDLE, &imageIndex);
     if (result == vk::Result::eErrorOutOfDateKHR)
     {
-        // -_-
-        // recreateSwapChain();
+        update();
         return;
     }
     else if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR)
@@ -71,21 +70,107 @@ void VulkanInstance::render()
 
     if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) // || framebufferResized)
     {
-        // framebufferResized = false;
-        //  -_-
-        // recreateSwapChain();
+        update();
     }
     else if (result != vk::Result::eSuccess)
     {
         throw EXCEPTION("Failed to present swap chain image");
     }
 
-    currentFrame_ = (currentFrame_ + 1) % engine_->config_.MAX_FRAMES_IN_FLIGHT;
+    currentFrame_ = (currentFrame_ + 1) % engine_->config.MAX_FRAMES_IN_FLIGHT;
 }
+void VulkanInstance::update()
+{
+    glfwGetFramebufferSize(engine_->window, &engine_->config.window_width, &engine_->config.window_height);
+    while (0 ==  engine_->config.window_width || 0 == engine_->config.window_height)
+    {
+        glfwGetFramebufferSize(engine_->window, &engine_->config.window_width, &engine_->config.window_height);
+        glfwWaitEvents();
+    }
+    device_.waitIdle();
+    for (auto &fence : inFlightFences_)
+        device_.destroyFence(fence);
+    for (auto &semaphore : imageAvailableSemaphores_)
+        device_.destroySemaphore(semaphore);
+    for (auto &semaphore : renderFinishedSemaphores_)
+        device_.destroySemaphore(semaphore);
+    inFlightFences_.clear();
+    imagesInFlightFences_.clear();
+    imageAvailableSemaphores_.clear();
+    renderFinishedSemaphores_.clear();
+    jointDescriptorSets_.clear();
+    commandBuffers_.clear();
+    device_.destroyPipeline(renderPipeline_);
+    device_.destroyPipeline(lightingPipeline_);
+    device_.destroyPipeline(raycastPipeline_);
+    device_.destroyPipelineLayout(renderPipelineLayout_);
+    device_.destroyPipelineLayout(lightingPipelineLayout_);
+    device_.destroyPipelineLayout(raycastPipelineLayout_);
+    renderDescriptorSets_.clear();
+    lightingDescriptorSets_.clear();
+    raycastDescriptorSets_.clear();
+    device_.destroyDescriptorSetLayout(renderSetLayout_);
+    device_.destroyDescriptorSetLayout(lightingSetLayout_);
+    device_.destroyDescriptorSetLayout(raycastSetLayout_);
+    device_.destroySampler(imageSampler_);
 
+    for (auto &imageView : imageViews_)
+        device_.destroyImageView(imageView);
+    imageViews_.clear();
+    images_.clear();
+    device_.destroySwapchainKHR(swapChain_);
+    device_.destroyDescriptorPool(renderPool_);
+    device_.destroyDescriptorPool(lightingPool_);
+    device_.destroyDescriptorPool(raycastPool_);
+    device_.destroyCommandPool(commandPool_);
+    createSwapchainObjects();
+}
 VulkanInstance::~VulkanInstance()
 {
+    device_.waitIdle();
+    for (auto &fence : inFlightFences_)
+        device_.destroyFence(fence);
+    for (auto &semaphore : imageAvailableSemaphores_)
+        device_.destroySemaphore(semaphore);
+    for (auto &semaphore : renderFinishedSemaphores_)
+        device_.destroySemaphore(semaphore);
+    inFlightFences_.clear();
+    imagesInFlightFences_.clear();
+    imageAvailableSemaphores_.clear();
+    renderFinishedSemaphores_.clear();
+    jointDescriptorSets_.clear();
+    commandBuffers_.clear();
+    device_.destroyPipeline(renderPipeline_);
+    device_.destroyPipeline(lightingPipeline_);
+    device_.destroyPipeline(raycastPipeline_);
+    device_.destroyPipelineLayout(renderPipelineLayout_);
+    device_.destroyPipelineLayout(lightingPipelineLayout_);
+    device_.destroyPipelineLayout(raycastPipelineLayout_);
+    renderDescriptorSets_.clear();
+    lightingDescriptorSets_.clear();
+    raycastDescriptorSets_.clear();
+    device_.destroyDescriptorSetLayout(renderSetLayout_);
+    device_.destroyDescriptorSetLayout(lightingSetLayout_);
+    device_.destroyDescriptorSetLayout(raycastSetLayout_);
+    device_.destroySampler(imageSampler_);
 
+    for (auto &imageView : imageViews_)
+        device_.destroyImageView(imageView);
+    imageViews_.clear();
+    images_.clear();
+
+    device_.destroySwapchainKHR(swapChain_);
+    instance_.destroySurfaceKHR(surface_);
+    device_.destroyDescriptorPool(renderPool_);
+    device_.destroyDescriptorPool(lightingPool_);
+    device_.destroyDescriptorPool(raycastPool_);
+    device_.destroyCommandPool(commandPool_);
+    utils_destroyBuffer(stagingBuffer_);
+    utils_destroyBuffer(octreeBuffer_);
+    utils_destroyBuffer(lightingBuffer_);
+    vmaDestroyAllocator(allocator_);
+    device_.destroy();
+    instance_.destroyDebugUtilsMessengerEXT(debugMessenger_, nullptr, dispatch_);
     instance_.destroy();
 }
 
@@ -116,10 +201,10 @@ void VulkanInstance::createInstance()
 {
     vk::ApplicationInfo app_info{
         engine_->config.window_title.c_str(), // Application Name
-        1,                                     // Application Version
-        nullptr,                               // Engine Name or nullptr
-        0,                                     // Engine Version
-        VK_API_VERSION_1_1                     // Vulkan API version
+        1,                                    // Application Version
+        nullptr,                              // Engine Name or nullptr
+        0,                                    // Engine Version
+        VK_API_VERSION_1_1                    // Vulkan API version
     };
 
     // Get required extensions for displaying to a window
@@ -188,7 +273,7 @@ void VulkanInstance::createPermanentObjects()
     vk::Result result;
 
     VkSurfaceKHR surface;
-    if ((result = (vk::Result)glfwCreateWindowSurface(instance_, engine_->window_, nullptr, &surface)) != vk::Result::eSuccess)
+    if ((result = (vk::Result)glfwCreateWindowSurface(instance_, engine_->window, nullptr, &surface)) != vk::Result::eSuccess)
     {
         throw EXCEPTION("Failed to create window surface!", result);
     }
@@ -229,14 +314,6 @@ void VulkanInstance::createPermanentObjects()
     if ((result = (vk::Result)vmaCreateAllocator(&allocator_create_info, &allocator_)) != vk::Result::eSuccess)
         throw EXCEPTION("Failed to create allocator", result);
 
-    vk::CommandPoolCreateInfo poolInfo{};
-    poolInfo.queueFamilyIndex = queueSupportDetails.computeFamily.value();
-
-    if ((result = device_.createCommandPool(&poolInfo, nullptr, &commandPool_)) != vk::Result::eSuccess)
-    {
-        throw EXCEPTION("Failed to create command pool", result);
-    }
-
     stagingBuffer_ = utils_createBuffer(65536, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
     octreeBuffer_ = utils_createBuffer(65536, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     lightingBuffer_ = utils_createBuffer(65536, vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -246,6 +323,13 @@ void VulkanInstance::createSwapchainObjects()
 {
     vk::Result result;
     QueueSupportDetails queueSupportDetails = utils_getQueueSupportDetails();
+    vk::CommandPoolCreateInfo poolInfo{};
+    poolInfo.queueFamilyIndex = queueSupportDetails.computeFamily.value();
+
+    if ((result = device_.createCommandPool(&poolInfo, nullptr, &commandPool_)) != vk::Result::eSuccess)
+    {
+        throw EXCEPTION("Failed to create command pool", result);
+    }
 
     SwapChainSupportDetails swapChainSupportDetails = utils_getSwapChainSupportDetails();
     LOGGING->verbose() << "Got swapchain support" << std::endl;
@@ -400,11 +484,10 @@ void VulkanInstance::createSwapchainObjects()
     }
     LOGGING->info() << "Updated descriptor sets" << std::endl;
     SpecializationConstants constants;
-    vk::PipelineLayout raycastPipelineLayout_, lightingPipelineLayout_, renderPipelineLayout_;
-
+    vk::ShaderModule raycastModule= utils_createShaderModule("shaders/raycast.spv");
     vk::PipelineShaderStageCreateInfo raycastShaderInfo{};
     raycastShaderInfo.stage = vk::ShaderStageFlagBits::eCompute;
-    raycastShaderInfo.module = utils_createShaderModule("shaders/raycast.spv");
+    raycastShaderInfo.module =raycastModule;
     raycastShaderInfo.pName = "main";
 
     vk::SpecializationInfo raycastSpecializationInfo;
@@ -434,10 +517,11 @@ void VulkanInstance::createSwapchainObjects()
     if (pipelineResult.result != vk::Result::eSuccess)
         throw EXCEPTION("Failed to create compute pipeline", pipelineResult.result);
     raycastPipeline_ = pipelineResult.value;
-
+    device_.destroyShaderModule(raycastModule);
+    vk::ShaderModule lightingModule = utils_createShaderModule("shaders/lighting.spv");;
     vk::PipelineShaderStageCreateInfo lightingShaderInfo{};
     lightingShaderInfo.stage = vk::ShaderStageFlagBits::eCompute;
-    lightingShaderInfo.module = utils_createShaderModule("shaders/lighting.spv");
+    lightingShaderInfo.module = lightingModule;
     lightingShaderInfo.pName = "main";
 
     vk::SpecializationInfo lightingSpecializationInfo;
@@ -465,10 +549,11 @@ void VulkanInstance::createSwapchainObjects()
     if (pipelineResult.result != vk::Result::eSuccess)
         throw EXCEPTION("Failed to create compute pipeline", pipelineResult.result);
     lightingPipeline_ = pipelineResult.value;
-
+    device_.destroyShaderModule(lightingModule);
+    vk::ShaderModule renderModule=utils_createShaderModule("shaders/render.spv");;
     vk::PipelineShaderStageCreateInfo renderShaderInfo{};
     renderShaderInfo.stage = vk::ShaderStageFlagBits::eCompute;
-    renderShaderInfo.module = utils_createShaderModule("shaders/render.spv");
+    renderShaderInfo.module = renderModule;
     renderShaderInfo.pName = "main";
 
     vk::SpecializationInfo renderSpecializationInfo;
@@ -499,8 +584,7 @@ void VulkanInstance::createSwapchainObjects()
     renderPipeline_ = pipelineResult.value;
     LOGGING->info() << "Created pipelines" << std::endl;
     commandBuffers_.resize(images_.size() * 2);
-    copyCommandBuffers_.resize(images_.size());
-
+    device_.destroyShaderModule(renderModule);
     vk::CommandBufferAllocateInfo commandBufferAllocateInfo{};
     commandBufferAllocateInfo.commandPool = commandPool_;
     commandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
@@ -519,7 +603,7 @@ void VulkanInstance::createSwapchainObjects()
                                                {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, raycastPipeline_);
         commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, raycastPipelineLayout_, 0, 1, &raycastDescriptorSets_[i], 0, nullptr);
-        commandBuffers_[i].dispatch(engine_->config_.window_width / 16 + 1, engine_->config_.window_height / 16 + 1, 1); // TODO
+        commandBuffers_[i].dispatch(engine_->config.window_width / 16 + 1, engine_->config.window_height / 16 + 1, 1); // TODO
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
@@ -538,14 +622,14 @@ void VulkanInstance::createSwapchainObjects()
 
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, renderPipeline_);
         commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, renderPipelineLayout_, 0, 1, &renderDescriptorSets_[i], 0, nullptr);
-        commandBuffers_[i].dispatch(engine_->config_.window_width / 16 + 1, engine_->config_.window_height / 16 + 1, 1); // TODO
+        commandBuffers_[i].dispatch(engine_->config.window_width / 16 + 1, engine_->config.window_height / 16 + 1, 1); // TODO
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{}, std::vector<vk::ImageMemoryBarrier>{{vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
 
         commandBuffers_[i].end();
     }
-    LOGGING->info() << "First command buffers recorded";
+    LOGGING->info() << "First command buffers recorded" << std::endl;
     for (size_t i = commandBuffers_.size() / 2; i < commandBuffers_.size(); i++)
     {
         vk::CommandBufferBeginInfo beginInfo{};
@@ -556,46 +640,46 @@ void VulkanInstance::createSwapchainObjects()
                                            std::vector<vk::BufferMemoryBarrier>{
                                                {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, octreeBuffer_.buffer, 0, 65536}},
                                            std::vector<vk::ImageMemoryBarrier>{
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i-images_.size()], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
+                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i - images_.size()], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, raycastPipeline_);
-        commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, raycastPipelineLayout_, 0, 1, &raycastDescriptorSets_[i-images_.size()], 0, nullptr);
-        commandBuffers_[i].dispatch(engine_->config_.window_width / 16 + 1, engine_->config_.window_height / 16 + 1, 1); // TODO
+        commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, raycastPipelineLayout_, 0, 1, &raycastDescriptorSets_[i - images_.size()], 0, nullptr);
+        commandBuffers_[i].dispatch(engine_->config.window_width / 16 + 1, engine_->config.window_height / 16 + 1, 1); // TODO
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
                                                {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, lightingBuffer_.buffer, 0, 65536}},
                                            std::vector<vk::ImageMemoryBarrier>{
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i-images_.size()], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
+                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i - images_.size()], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, lightingPipeline_);
-        commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, lightingPipelineLayout_, 0, 1, &lightingDescriptorSets_[i-images_.size()], 0, nullptr);
+        commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, lightingPipelineLayout_, 0, 1, &lightingDescriptorSets_[i - images_.size()], 0, nullptr);
         commandBuffers_[i].dispatch(65536, 1, 1); // TODO
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
                                                {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, lightingBuffer_.buffer, 0, 65536}},
                                            std::vector<vk::ImageMemoryBarrier>{
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i-images_.size()], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
+                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i - images_.size()], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
 
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, renderPipeline_);
-        commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, renderPipelineLayout_, 0, 1, &renderDescriptorSets_[i-images_.size()], 0, nullptr);
-        commandBuffers_[i].dispatch(engine_->config_.window_width / 16 + 1, engine_->config_.window_height / 16 + 1, 1); // TODO
+        commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, renderPipelineLayout_, 0, 1, &renderDescriptorSets_[i - images_.size()], 0, nullptr);
+        commandBuffers_[i].dispatch(engine_->config.window_width / 16 + 1, engine_->config.window_height / 16 + 1, 1); // TODO
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags{}, {},
-                                           std::vector<vk::BufferMemoryBarrier>{}, std::vector<vk::ImageMemoryBarrier>{{vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i-images_.size()], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
+                                           std::vector<vk::BufferMemoryBarrier>{}, std::vector<vk::ImageMemoryBarrier>{{vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i - images_.size()], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
 
         commandBuffers_[i].end();
     }
     LOGGING->info() << "Created command buffers" << std::endl;
-    imageAvailableSemaphores_.resize(engine_->config_.MAX_FRAMES_IN_FLIGHT);
-    renderFinishedSemaphores_.resize(engine_->config_.MAX_FRAMES_IN_FLIGHT);
-    inFlightFences_.resize(engine_->config_.MAX_FRAMES_IN_FLIGHT);
+    imageAvailableSemaphores_.resize(engine_->config.MAX_FRAMES_IN_FLIGHT);
+    renderFinishedSemaphores_.resize(engine_->config.MAX_FRAMES_IN_FLIGHT);
+    inFlightFences_.resize(engine_->config.MAX_FRAMES_IN_FLIGHT);
     imagesInFlightFences_.resize(images_.size(), vk::Fence{});
 
     vk::SemaphoreCreateInfo semaphoreCreateInfo{};
 
     vk::FenceCreateInfo fenceCreateInfo{vk::FenceCreateFlagBits::eSignaled};
 
-    for (size_t i = 0; i < engine_->config_.MAX_FRAMES_IN_FLIGHT; i++)
+    for (size_t i = 0; i < engine_->config.MAX_FRAMES_IN_FLIGHT; i++)
     {
         if (device_.createSemaphore(&semaphoreCreateInfo, nullptr, &imageAvailableSemaphores_[i]) != vk::Result::eSuccess ||
             device_.createSemaphore(&semaphoreCreateInfo, nullptr, &renderFinishedSemaphores_[i]) != vk::Result::eSuccess ||
@@ -640,7 +724,7 @@ vk::DescriptorPool VulkanInstance::utils_createDescriptorPool(std::vector<vk::De
     std::vector<vk::DescriptorPoolSize> pool_sizes;
     for (vk::DescriptorType type : descriptorTypes)
     {
-        pool_sizes.push_back(vk::DescriptorPoolSize{type, static_cast<uint32_t>(engine_->config_.MAX_FRAMES_IN_FLIGHT)});
+        pool_sizes.push_back(vk::DescriptorPoolSize{type, static_cast<uint32_t>(engine_->config.MAX_FRAMES_IN_FLIGHT)});
     }
     vk::DescriptorPoolCreateInfo poolCreateInfo{};
     poolCreateInfo.poolSizeCount = pool_sizes.size();
@@ -712,8 +796,8 @@ VulkanInstance::SwapChainSupportDetails VulkanInstance::utils_getSwapChainSuppor
         supportDetails.presentMode = vk::PresentModeKHR::eFifo;
 
     supportDetails.extent = vk::Extent2D{
-        engine_->config_.window_width,
-        engine_->config_.window_height};
+        engine_->config.window_width,
+        engine_->config.window_height};
 
     supportDetails.extent.width = std::clamp(supportDetails.extent.width, supportDetails.capabilities.minImageExtent.width, supportDetails.capabilities.maxImageExtent.width);
     supportDetails.extent.height = std::clamp(supportDetails.extent.height, supportDetails.capabilities.minImageExtent.height, supportDetails.capabilities.maxImageExtent.height);
@@ -753,7 +837,16 @@ vk::ShaderModule VulkanInstance::utils_createShaderModule(std::string path)
     file.read(data.data(), size);
     file.close();
 
-    vk::ShaderModuleCreateInfo createInfo{{}, size, (uint32_t *)data.data()}; // VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO
+    vk::ShaderModuleCreateInfo createInfo{{}, size, (uint32_t *)data.data()}; 
 
     return device_.createShaderModule(createInfo);
+}
+/**
+ * @brief Destroys the VmaBuffer
+ * 
+ * @param buffer 
+ */
+void VulkanInstance::utils_destroyBuffer(VmaBuffer buffer)
+{
+    vmaDestroyBuffer(allocator_, static_cast<VkBuffer>(buffer.buffer), buffer.allocation);
 }

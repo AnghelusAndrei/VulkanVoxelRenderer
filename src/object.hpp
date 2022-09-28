@@ -2,8 +2,9 @@
 #define OBJECT_HPP
 
 #include "vulkaninstance.hpp"
-
+#include <sstream>
 class utils;
+template <class T>
 class Octree;
 class Object{
 public:
