@@ -1,12 +1,13 @@
 #include "voxelengine.hpp"
 
-VoxelEngine::VoxelEngine() : octree(new Octree), camera(new Camera), lights(new LightCollection), materials(new MaterialCollection), objects(new ObjectCollection)
+VoxelEngine::VoxelEngine(Config config) : config_(config)
 {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // We specify the window hint in order for GLFW to not create by default a OpenGL context
 
     
-    glfwCreateWindow(config.window_width, config.window_height, config.window_title.c_str(), nullptr, nullptr);
+    window =glfwCreateWindow(config_.window_width, config_.window_height, config_.window_title.c_str(), nullptr, nullptr);
+
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebuffer_resized);
     glfwSetWindowMaximizeCallback(window, window_maximized);
@@ -23,36 +24,50 @@ VoxelEngine::VoxelEngine() : octree(new Octree), camera(new Camera), lights(new 
 
 void VoxelEngine::run()
 {
-    
+    running_=true;
+    //std::thread inputThread();
+    std::thread renderThread(&VulkanInstance::run, instance_);
+    Octree *octree = new Octree(4);
+    Octree::Node node;
+    node.isLeaf=true;
+    glm::u8vec3 rgb = glm::u8vec3(255, 0, 0);
+    node.leaf.data=Octree::utils_rgb(rgb.r, rgb.g, rgb.b);
+
+    octree->insert({0,0,0}, node);
+    octree->insert({0,0,1}, node);
+    octree->insert({0,1,0}, node);
+    octree->insert({1,0,0}, node);
+    octree->insert({0,1,1}, node);
+    octree->insert({1,0,1}, node);
+    octree->insert({1,1,0}, node);
+    octree->insert({1,1,1}, node);
+    octree->upload(instance_);
     while (!glfwWindowShouldClose(window))
     {
-        glfwPollEvents();
-        instance_->render();
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+    running_=false;
+    renderThread.join();
     instance_->device_.waitIdle();
 }
 void VoxelEngine::framebuffer_resized(GLFWwindow *window_, int width, int height)
 {
     auto engine = reinterpret_cast<VoxelEngine *>(glfwGetWindowUserPointer(window_));
-    engine->config.window_height = height;
-    engine->config.window_width = width;
+    engine->config_.window_height = height;
+    engine->config_.window_width = width;
 }
 void VoxelEngine::window_maximized(GLFWwindow *window_, int maximized)
 {
     int width, height;
     glfwGetFramebufferSize(window_, &width, &height);
     auto engine = reinterpret_cast<VoxelEngine *>(glfwGetWindowUserPointer(window_));
-    engine->config.window_height = height;
-    engine->config.window_width = width;
+    engine->config_.window_height = height;
+    engine->config_.window_width = width;
 }
 
 VoxelEngine::~VoxelEngine()
 {
-    delete materials;
-    delete lights;
-    delete objects;
-    delete octree;
-    delete camera;
+    delete instance_;
     glfwDestroyWindow(window);
     glfwTerminate();
 }

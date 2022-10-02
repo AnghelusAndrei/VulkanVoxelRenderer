@@ -27,7 +27,9 @@ vec4 packIndex(uint index) {
 void main()
 {
     ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
-    lighting.data[0]=vec4(1.0, 1.0, 0.0, 1.0);
+    uint data = octree.data[0];
+    data&=0xFFFFFFF;
+    lighting.data[0]=vec4(float(data&0xFF), float(data&0xFF00), float(data&0xFF0000), 1.0);
 
     imageStore(OutputImage, pixel_coords, packIndex(0));
 }

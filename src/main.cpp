@@ -7,7 +7,7 @@ int main()
         .window_height=600,
         .window_title="VULKAN"
     };
-    VoxelEngine engine;
+    VoxelEngine engine(config);
 
     engine.run();
 }
