@@ -15,7 +15,7 @@ class Octree
 public:
     struct __attribute__((packed)) Node
     {
-        unsigned isLeaf : 1;
+        unsigned isNode : 1;
         union __attribute__((packed))
         {
             struct __attribute__((packed)) 

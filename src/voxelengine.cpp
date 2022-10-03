@@ -27,20 +27,17 @@ void VoxelEngine::run()
     running_=true;
     //std::thread inputThread();
     std::thread renderThread(&VulkanInstance::run, instance_);
-    Octree *octree = new Octree(4);
+    Octree *octree = new Octree(2);
     Octree::Node node;
-    node.isLeaf=true;
+    node.isNode=false;
     glm::u8vec3 rgb = glm::u8vec3(255, 0, 0);
     node.leaf.data=Octree::utils_rgb(rgb.r, rgb.g, rgb.b);
-
-    octree->insert({0,0,0}, node);
-    octree->insert({0,0,1}, node);
-    octree->insert({0,1,0}, node);
-    octree->insert({1,0,0}, node);
-    octree->insert({0,1,1}, node);
-    octree->insert({1,0,1}, node);
-    octree->insert({1,1,0}, node);
-    octree->insert({1,1,1}, node);
+    for(int i=0;i<4;i++)
+    for(int j=0;j<4;j++)
+    for(int k=0;k<4;k++)
+    {
+        octree->insert({i,j,k}, node);
+    }
     octree->upload(instance_);
     while (!glfwWindowShouldClose(window))
     {

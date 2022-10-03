@@ -112,10 +112,10 @@ private:
     VmaAllocator allocator_;
     std::mutex uploadMutex_;
     bool upload_;
-    VmaBuffer octreeBuffer_, lightingBuffer_;
+    VmaBuffer uniformBuffer_, octreeBuffer_, lightingBuffer_;
 
     size_t currentFrame_ = 0;
-
+    size_t uniformSize=512;
     vk::CommandPool commandPool_;
     vk::DescriptorPool raycastPool_, lightingPool_, renderPool_;
     vk::SwapchainKHR swapChain_;

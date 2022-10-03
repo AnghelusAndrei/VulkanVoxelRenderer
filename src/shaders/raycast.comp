@@ -4,16 +4,18 @@ layout(local_size_x = 16, local_size_y = 16) in;
 layout(constant_id=0) const uint screenWidth = 800;
 layout(constant_id=1) const uint screenHeight = 600;
 const uvec2 screenSize=uvec2(screenWidth, screenHeight);
-
-layout(std140, set=0, binding=0) readonly buffer OctreeBuffer {
+layout(set=0, binding=0) uniform UniformBufferObject {
+    int test;
+} ubo;
+layout(std140, set=0, binding=1) readonly buffer OctreeBuffer {
     uint data[];
 } octree;
 
-layout(std140, set=0, binding=1) writeonly buffer LightingBuffer {
+layout(std140, set=0, binding=2) writeonly buffer LightingBuffer {
     vec4 data[];
 } lighting;
  
-layout(rgba8, set=0, binding=2) uniform writeonly image2D OutputImage;
+layout(rgba8, set=0, binding=3) uniform writeonly image2D OutputImage;
 
 vec4 packIndex(uint index) {
     float x = uintBitsToFloat(index & 0xFF000000);
@@ -27,9 +29,7 @@ vec4 packIndex(uint index) {
 void main()
 {
     ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
-    uint data = octree.data[0];
-    data&=0xFFFFFFF;
-    lighting.data[0]=vec4(float(data&0xFF), float(data&0xFF00), float(data&0xFF0000), 1.0);
+
 
     imageStore(OutputImage, pixel_coords, packIndex(0));
 }

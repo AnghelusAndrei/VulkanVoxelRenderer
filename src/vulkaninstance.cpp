@@ -15,7 +15,7 @@ VulkanInstance::VulkanInstance(VoxelEngine *engine) : engine_(engine)
 
 void VulkanInstance::run()
 {
-    while(engine_->running_)
+    while (engine_->running_)
     {
         glfwPollEvents();
         render();
@@ -52,11 +52,13 @@ void VulkanInstance::render()
 
     submitInfo.commandBufferCount = 1;
     uploadMutex_.lock();
-    if(upload_)
+    if (upload_)
     {
-        submitInfo.pCommandBuffers = &commandBuffers_[imageIndex+ commandBuffers_.size()/2];
-    }else submitInfo.pCommandBuffers = &commandBuffers_[imageIndex];
-    upload_=false;
+        submitInfo.pCommandBuffers = &commandBuffers_[imageIndex + commandBuffers_.size() / 2];
+    }
+    else
+        submitInfo.pCommandBuffers = &commandBuffers_[imageIndex];
+    upload_ = false;
     uploadMutex_.unlock();
     vk::Semaphore signalSemaphores[] = {renderFinishedSemaphores_[currentFrame_]};
     submitInfo.signalSemaphoreCount = 1;
@@ -95,7 +97,7 @@ void VulkanInstance::render()
 void VulkanInstance::update()
 {
     glfwGetFramebufferSize(engine_->window, &engine_->config_.window_width, &engine_->config_.window_height);
-    while (0 ==  engine_->config_.window_width || 0 == engine_->config_.window_height)
+    while (0 == engine_->config_.window_width || 0 == engine_->config_.window_height)
     {
         glfwGetFramebufferSize(engine_->window, &engine_->config_.window_width, &engine_->config_.window_height);
         glfwWaitEvents();
@@ -214,10 +216,10 @@ void VulkanInstance::createInstance()
 {
     vk::ApplicationInfo app_info{
         engine_->config_.window_title.c_str(), // Application Name
-        1,                                    // Application Version
-        nullptr,                              // Engine Name or nullptr
-        0,                                    // Engine Version
-        VK_API_VERSION_1_1                    // Vulkan API version
+        1,                                     // Application Version
+        nullptr,                               // Engine Name or nullptr
+        0,                                     // Engine Version
+        VK_API_VERSION_1_1                     // Vulkan API version
     };
 
     // Get required extensions for displaying to a window
@@ -328,6 +330,7 @@ void VulkanInstance::createPermanentObjects()
         throw EXCEPTION("Failed to create allocator", result);
 
     stagingBuffer_ = utils_createBuffer(65536, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
+    uniformBuffer_ = utils_createBuffer(uniformSize, vk::BufferUsageFlagBits::eUniformBuffer, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
     octreeBuffer_ = utils_createBuffer(65536, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     lightingBuffer_ = utils_createBuffer(65536, vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
@@ -387,8 +390,8 @@ void VulkanInstance::createSwapchainObjects()
     LOGGING->info() << "Created swapchain" << std::endl;
     images_ = device_.getSwapchainImagesKHR(swapChain_);
     imageViews_.resize(images_.size());
-    raycastPool_ = utils_createDescriptorPool({vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageImage});
-    lightingPool_ = utils_createDescriptorPool({vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageBuffer});
+    raycastPool_ = utils_createDescriptorPool({vk::DescriptorType::eUniformBuffer, vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageImage});
+    lightingPool_ = utils_createDescriptorPool({vk::DescriptorType::eUniformBuffer, vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageBuffer});
     renderPool_ = utils_createDescriptorPool({vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageImage});
 
     for (size_t i = 0; i < images_.size(); i++)
@@ -435,8 +438,8 @@ void VulkanInstance::createSwapchainObjects()
         throw EXCEPTION("Failed to create the sampler", result);
     }
     LOGGING->info() << "Created sampler" << std::endl;
-    raycastSetLayout_ = utils_createDescriptorSetLayout({{0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {2, vk::DescriptorType::eStorageImage, 1, vk::ShaderStageFlagBits::eCompute, &imageSampler_}});
-    lightingSetLayout_ = utils_createDescriptorSetLayout({{0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}});
+    raycastSetLayout_ = utils_createDescriptorSetLayout({{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {2, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {3, vk::DescriptorType::eStorageImage, 1, vk::ShaderStageFlagBits::eCompute, &imageSampler_}});
+    lightingSetLayout_ = utils_createDescriptorSetLayout({{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {2, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}});
     renderSetLayout_ = utils_createDescriptorSetLayout({{0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {1, vk::DescriptorType::eStorageImage, 1, vk::ShaderStageFlagBits::eCompute, &imageSampler_}});
     LOGGING->info() << "Created descriptor set layouts" << std::endl;
     raycastDescriptorSets_ = utils_allocateDescriptorSets(raycastPool_, raycastSetLayout_);
@@ -445,6 +448,9 @@ void VulkanInstance::createSwapchainObjects()
     LOGGING->info() << "Created descriptor sets" << std::endl;
     for (size_t i = 0; i < images_.size(); i++)
     {
+        vk::DescriptorBufferInfo uniformBufferInfo{};
+        uniformBufferInfo.buffer = uniformBuffer_.buffer;
+        uniformBufferInfo.range = VK_WHOLE_SIZE;
         vk::DescriptorBufferInfo octreeBufferInfo{};
         octreeBufferInfo.buffer = octreeBuffer_.buffer;
         octreeBufferInfo.range = VK_WHOLE_SIZE;
@@ -457,15 +463,19 @@ void VulkanInstance::createSwapchainObjects()
         imageInfo.sampler = imageSampler_;
 
         std::vector<vk::WriteDescriptorSet> writeDescriptorSets;
-        writeDescriptorSets.push_back(vk::WriteDescriptorSet{raycastDescriptorSets_[i], 0, 0, vk::DescriptorType::eStorageBuffer, nullptr, octreeBufferInfo, nullptr, nullptr});
-        writeDescriptorSets.push_back(vk::WriteDescriptorSet{raycastDescriptorSets_[i], 1, 0, vk::DescriptorType::eStorageBuffer, nullptr, lightingBufferInfo, nullptr, nullptr});
-        writeDescriptorSets.push_back(vk::WriteDescriptorSet{raycastDescriptorSets_[i], 2, 0, vk::DescriptorType::eStorageImage, imageInfo, nullptr, nullptr, nullptr});
+        writeDescriptorSets.push_back(vk::WriteDescriptorSet{raycastDescriptorSets_[i], 0, 0, vk::DescriptorType::eUniformBuffer, nullptr, uniformBufferInfo, nullptr, nullptr});
+        writeDescriptorSets.push_back(vk::WriteDescriptorSet{raycastDescriptorSets_[i], 1, 0, vk::DescriptorType::eStorageBuffer, nullptr, octreeBufferInfo, nullptr, nullptr});
+        writeDescriptorSets.push_back(vk::WriteDescriptorSet{raycastDescriptorSets_[i], 2, 0, vk::DescriptorType::eStorageBuffer, nullptr, lightingBufferInfo, nullptr, nullptr});
+        writeDescriptorSets.push_back(vk::WriteDescriptorSet{raycastDescriptorSets_[i], 3, 0, vk::DescriptorType::eStorageImage, imageInfo, nullptr, nullptr, nullptr});
 
         device_.updateDescriptorSets(writeDescriptorSets, nullptr);
     }
 
     for (size_t i = 0; i < images_.size(); i++)
     {
+        vk::DescriptorBufferInfo uniformBufferInfo{};
+        uniformBufferInfo.buffer = uniformBuffer_.buffer;
+        uniformBufferInfo.range = VK_WHOLE_SIZE;
         vk::DescriptorBufferInfo octreeBufferInfo{};
         octreeBufferInfo.buffer = octreeBuffer_.buffer;
         octreeBufferInfo.range = VK_WHOLE_SIZE;
@@ -473,8 +483,9 @@ void VulkanInstance::createSwapchainObjects()
         lightingBufferInfo.buffer = lightingBuffer_.buffer;
         lightingBufferInfo.range = VK_WHOLE_SIZE;
         std::vector<vk::WriteDescriptorSet> writeDescriptorSets;
-        writeDescriptorSets.push_back(vk::WriteDescriptorSet{lightingDescriptorSets_[i], 0, 0, vk::DescriptorType::eStorageBuffer, nullptr, octreeBufferInfo, nullptr, nullptr});
-        writeDescriptorSets.push_back(vk::WriteDescriptorSet{lightingDescriptorSets_[i], 1, 0, vk::DescriptorType::eStorageBuffer, nullptr, lightingBufferInfo, nullptr, nullptr});
+        writeDescriptorSets.push_back(vk::WriteDescriptorSet{lightingDescriptorSets_[i], 0, 0, vk::DescriptorType::eUniformBuffer, nullptr, uniformBufferInfo, nullptr, nullptr});
+        writeDescriptorSets.push_back(vk::WriteDescriptorSet{lightingDescriptorSets_[i], 1, 0, vk::DescriptorType::eStorageBuffer, nullptr, octreeBufferInfo, nullptr, nullptr});
+        writeDescriptorSets.push_back(vk::WriteDescriptorSet{lightingDescriptorSets_[i], 2, 0, vk::DescriptorType::eStorageBuffer, nullptr, lightingBufferInfo, nullptr, nullptr});
 
         device_.updateDescriptorSets(writeDescriptorSets, nullptr);
     }
@@ -497,10 +508,10 @@ void VulkanInstance::createSwapchainObjects()
     }
     LOGGING->info() << "Updated descriptor sets" << std::endl;
     SpecializationConstants constants;
-    vk::ShaderModule raycastModule= utils_createShaderModule("shaders/raycast.spv");
+    vk::ShaderModule raycastModule = utils_createShaderModule("shaders/raycast.spv");
     vk::PipelineShaderStageCreateInfo raycastShaderInfo{};
     raycastShaderInfo.stage = vk::ShaderStageFlagBits::eCompute;
-    raycastShaderInfo.module =raycastModule;
+    raycastShaderInfo.module = raycastModule;
     raycastShaderInfo.pName = "main";
 
     vk::SpecializationInfo raycastSpecializationInfo;
@@ -531,7 +542,8 @@ void VulkanInstance::createSwapchainObjects()
         throw EXCEPTION("Failed to create compute pipeline", pipelineResult.result);
     raycastPipeline_ = pipelineResult.value;
     device_.destroyShaderModule(raycastModule);
-    vk::ShaderModule lightingModule = utils_createShaderModule("shaders/lighting.spv");;
+    vk::ShaderModule lightingModule = utils_createShaderModule("shaders/lighting.spv");
+    ;
     vk::PipelineShaderStageCreateInfo lightingShaderInfo{};
     lightingShaderInfo.stage = vk::ShaderStageFlagBits::eCompute;
     lightingShaderInfo.module = lightingModule;
@@ -563,7 +575,8 @@ void VulkanInstance::createSwapchainObjects()
         throw EXCEPTION("Failed to create compute pipeline", pipelineResult.result);
     lightingPipeline_ = pipelineResult.value;
     device_.destroyShaderModule(lightingModule);
-    vk::ShaderModule renderModule=utils_createShaderModule("shaders/render.spv");;
+    vk::ShaderModule renderModule = utils_createShaderModule("shaders/render.spv");
+    ;
     vk::PipelineShaderStageCreateInfo renderShaderInfo{};
     renderShaderInfo.stage = vk::ShaderStageFlagBits::eCompute;
     renderShaderInfo.module = renderModule;
@@ -611,7 +624,8 @@ void VulkanInstance::createSwapchainObjects()
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, octreeBuffer_.buffer, 0, 65536}},
+                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, octreeBuffer_.buffer, 0, 65536},
+                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, uniformBuffer_.buffer, 0, uniformSize}},
                                            std::vector<vk::ImageMemoryBarrier>{
                                                {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, raycastPipeline_);
@@ -651,7 +665,8 @@ void VulkanInstance::createSwapchainObjects()
         commandBuffers_[i].copyBuffer(stagingBuffer_.buffer, octreeBuffer_.buffer, vk::BufferCopy{0, 0, 65536});
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, octreeBuffer_.buffer, 0, 65536}},
+                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, octreeBuffer_.buffer, 0, 65536},
+                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, uniformBuffer_.buffer, 0, uniformSize}},
                                            std::vector<vk::ImageMemoryBarrier>{
                                                {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i - images_.size()], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, raycastPipeline_);
@@ -850,14 +865,14 @@ vk::ShaderModule VulkanInstance::utils_createShaderModule(std::string path)
     file.read(data.data(), size);
     file.close();
 
-    vk::ShaderModuleCreateInfo createInfo{{}, size, (uint32_t *)data.data()}; 
+    vk::ShaderModuleCreateInfo createInfo{{}, size, (uint32_t *)data.data()};
 
     return device_.createShaderModule(createInfo);
 }
 /**
  * @brief Destroys the VmaBuffer
- * 
- * @param buffer 
+ *
+ * @param buffer
  */
 void VulkanInstance::utils_destroyBuffer(VmaBuffer buffer)
 {

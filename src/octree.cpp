@@ -26,9 +26,9 @@ void Octree::upload(VulkanInstance *instance)
     instance->upload_ = true;
     for(int i=0;i<256;i++)
     {
-        if(nodes_[i].isLeaf)
+        if(!nodes_[i].isNode)
         {
-            LOGGING->print(VERBOSE) << "LEAF" << ' ';
+            LOGGING->print(VERBOSE) << std::hex << nodes_[i].leaf.data << ' ';
 
         }else LOGGING->print(VERBOSE) << nodes_[i].node.next << ' ';
         if((i-1)%8==0&&i>1) LOGGING->print(VERBOSE) << '\n';
@@ -38,8 +38,8 @@ void Octree::upload(VulkanInstance *instance)
 }
 uint32_t Octree::utils_locate(glm::uvec3 position, uint32_t depth)
 {
-    LOGGING->verbose() << "AND:  " << (position.x & utils_p2r[depth])<<'\n';
-    return ((position.x & utils_p2r[depth]) << 2) | ((position.y & utils_p2r[depth]) << 1) | (position.z & utils_p2r[depth]);
+    LOGGING->verbose() << "AND:  " << (position.x & utils_p2r[depth]) << (position.y & utils_p2r[depth]) << (position.z & utils_p2r[depth])<<'\n';
+    return (((bool)(position.x & utils_p2r[depth])) << 2) | ((bool)((position.y & utils_p2r[depth])) << 1) |((bool)(position.z & utils_p2r[depth]));
 }
 uint32_t Octree::utils_lookup(glm::uvec3 position)
 {
@@ -48,7 +48,7 @@ uint32_t Octree::utils_lookup(glm::uvec3 position)
     {
         offset += utils_locate(position, depth);
         Node leaf = nodes_[offset];
-        if (leaf.isLeaf)
+        if (!leaf.isNode)
             return offset;
         offset = leaf.node.next;
     }
@@ -57,12 +57,13 @@ void Octree::insert(glm::uvec3 position, Node data)
 {
     uint32_t offset = 0;
     uint32_t lastNode = 0;
+    data.isNode=false;
     for (int depth = 1; depth < depth_; depth++)
     {
         offset += utils_locate(position, depth);
         LOGGING->verbose() << "Offset: " << offset <<'\n'; 
         Node leaf = nodes_[offset];
-        if(!leaf.isLeaf){
+        if(!leaf.isNode){
             uint32_t nextOffset;
             if(freeNodes.empty()){
                 newNode+=8;
@@ -72,7 +73,7 @@ void Octree::insert(glm::uvec3 position, Node data)
                 freeNodes.pop();
             }
             Node node;
-            node.isLeaf = 0;
+            node.isNode = 1;
             node.node.next = nextOffset;
             node.node.count = 0;
             nodes_[offset] = node;
@@ -97,7 +98,7 @@ void Octree::remove(glm::uvec3 position)
     {
         int i = offset + utils_locate(position, depth);
         Node leaf = nodes_[i];
-        if(!leaf.isLeaf){
+        if(!leaf.isNode){
             return;
         }else{
             localNodes.push(offset);
@@ -107,10 +108,10 @@ void Octree::remove(glm::uvec3 position)
 
     int i = offset + utils_locate(position, depth_);
     Node removed = {
-        .isLeaf = 0,
+        .isNode = 0,
         .leaf = {
-            .data = 0,
-            .type = 0
+            0,0
+
         }
     };
     nodes_[i] = removed;
