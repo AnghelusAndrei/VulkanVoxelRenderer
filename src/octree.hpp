@@ -35,22 +35,23 @@ public:
     Octree(uint32_t depth);
     void upload(VulkanInstance *instance);
 
+    uint32_t lookup(glm::uvec3 position);
     void insert(glm::uvec3 position, Node data);
-    void insert(glm::uvec3 position, Node data, std::function<bool(uint32_t)> func);
+    void insert(glm::uvec3 position, Node data, std::function<bool(uint8_t)> func);
     void remove(glm::uvec3 position);
-    void remove(glm::uvec3 position, std::function<bool(uint32_t)> func);
+    void remove(glm::uvec3 position, std::function<bool(uint8_t)> func);
     void move(glm::uvec3 position1, glm::uvec3 position2);
-    void move(glm::uvec3 position1, glm::uvec3 position2, std::function<bool(uint32_t, uint32_t)> func);
+    void move(glm::uvec3 position1, glm::uvec3 position2, std::function<int(uint8_t, uint8_t)> func); // func = 0 -> canceled, func = 1 -> delete v1, func = 2 -> success
 
     static uint32_t utils_rgb(uint8_t r, uint8_t g ,uint8_t b) { return ((r << 16) | (g<<8) | b);}
 private:
-    size_t capacity_;
+    size_t capacity_ = 0;
     const uint32_t depth_;
-    uint32_t newNode;
+    uint32_t newNode = 0;
     Node *nodes_;
     std::stack<uint32_t> freeNodes;
 
     uint32_t utils_p2r[maxDepth];
     uint32_t utils_locate(glm::uvec3 position, uint32_t depth);
-    uint32_t utils_lookup(glm::uvec3 position);
+    bool areContained(glm::uvec3 position1, glm::uvec3 position2, uint32_t depth);
 };

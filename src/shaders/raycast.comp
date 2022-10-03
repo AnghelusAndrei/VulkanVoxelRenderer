@@ -26,10 +26,174 @@ vec4 packIndex(uint index) {
     return result;
 }
 
+struct leaf{
+    uint data;
+    uint size;
+};
+
+struct voxel{
+    bool hit;
+    uint leaf;
+};
+
+#define semn(x)((x>=0) ? 1 : -1)
+bool inBounds(vec3 v, float n) {return 0<=v.x&&v.x<=n &&0<=v.y&&v.y<=n&&0<=v.z&&v.z<n;}
+
+int octree_l;
+float f_error = 0.001f;
+
+/*voxel Raycast(vec3 origin, vec3 direction, uint max_steps, float max_dist){
+    vec3 normal = {0,0,0};
+    vec3 ray = origin;
+    vec3 x,y,z;
+    vec3 v_add;
+    ivec3 found = {1,1,1};
+    int q = 0;
+    voxel empty = {false,0};
+
+    for(q;q<max_steps;++q) {
+
+        float d = 1e9;
+        float xD,yD,zD;
+
+        x=vec3(0,0,0);
+        y=vec3(0,0,0);
+        z=vec3(0,0,0);
+        v_add = vec3(0,0,0);
+
+        while(!inBounds(ray,octree_l)){
+            if(found.x == 1){
+                if(ray.x < 0){
+                    if(direction.x <= 0)found.x = 0;
+                    else{
+                    x.x = f_error-ray.x;
+                    x.y = (x.x*direction.y)/direction.x;
+                    x.z = (x.x*direction.z)/direction.x;
+                    }
+                }
+                if(ray.x > octree_l){
+                    if(direction.x >= 0)found.x = 0;
+                    else{
+                    x.x = octree_l-f_error-ray.x;
+                    x.y = (x.x*direction.y)/direction.x;
+                    x.z = (x.x*direction.z)/direction.x;
+                    }
+                }
+                if(found.x == 1){
+                    xD = distance(ray,ray+x);
+                    if(xD < d){d = xD; v_add = x;}
+                }
+            }
+
+
+            if(found.y == 1){
+                if(ray.y < 0){
+                    if(direction.y <= 0)found.y = 0;
+                    else{
+                    y.y = f_error-ray.y;
+                    y.x = (y.y*direction.x)/direction.y;
+                    y.z = (y.y*direction.z)/direction.y;
+                    }
+                }
+                if(ray.y > octree_l){
+                    if(direction.y >= 0)found.y = 0;
+                    else{
+                    y.y = octree_l-f_error-ray.y;
+                    y.x = (y.y*direction.x)/direction.y;
+                    y.z = (y.y*direction.z)/direction.y;
+                    }
+                }
+                if(found.y == 1){
+                    yD = distance(ray,ray+y);
+                    if(yD < d){d = yD; v_add = y;}
+                }
+            }
+
+
+            if(found.z == 1){
+                if(ray.z < 0){
+                    if(direction.z <= 0)found.z = 0;
+                    else{
+                    z.z = f_error-ray.z;
+                    z.x = (z.z*direction.x)/direction.z;
+                    z.y = (z.z*direction.y)/direction.z;
+                    }
+                }
+                if(ray.z > octree_l){
+                    if(direction.z >= 0)found.z = 0;
+                    else{
+                    z.z = octree_l-f_error-ray.z;
+                    z.x = (z.z*direction.x)/direction.z;
+                    z.y = (z.z*direction.y)/direction.z;
+                    }
+                }
+                if(found.z == 1){
+                    zD = distance(ray,ray+z);
+                    if(zD < d){d = zD; v_add = z;}
+                }
+            }
+
+            if((found.x == 0 && found.y == 0 && found.z == 0) || (v_add.x == 0 && v_add.y == 0 && v_add.z == 0)){
+                return empty;
+            }
+ 
+            ray = ray+v_add;
+            d = 1e9;
+
+            x=vec3(0,0,0);
+            y=vec3(0,0,0);
+            z=vec3(0,0,0);
+            v_add = vec3(0,0,0);
+
+            q++;
+        }
+
+        //leaf lookup here
+        leaf target;
+
+        x.x = (target.data.x-ray.x) + float(direction.x>0)*target.size + semn(direction.x)*f_error;
+        x.y = (x.x*direction.y)/direction.x;
+        x.z = (x.x*direction.z)/direction.x;
+
+        y.y = (target.data.y-ray.y) + float(direction.y>0)*target.size + semn(direction.y)*f_error;
+        y.x = (y.y*direction.x)/direction.y;
+        y.z = (y.y*direction.z)/direction.y;
+
+        z.z = (target.data.z-ray.z) + float(direction.z>0)*target.size + semn(direction.z)*f_error;
+        z.x = (z.z*direction.x)/direction.z;
+        z.y = (z.z*direction.y)/direction.z;
+
+
+        xD = sqrt(x.x*x.x + x.y*x.y + x.z*x.z);
+        yD = sqrt(y.x*y.x + y.y*y.y + y.z*y.z);
+        zD = sqrt(z.x*z.x + z.y*z.y + z.z*z.z);
+
+        if(xD < d){
+            d = xD; 
+            v_add = x; 
+            normal = (vec3){-semn(direction.x),0,0};
+        }
+        if(yD < d){
+            d = yD; 
+            v_add = y; 
+            normal = (vec3){0,-semn(direction.y),0};
+        }
+        if(zD < d){
+            d = zD; 
+            v_add = z; 
+            normal = (vec3){0,0,-semn(direction.z)};
+        }
+        
+
+        ray += v_add;
+    }
+
+    return empty;
+}*/
+
 void main()
 {
     ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
-
 
     imageStore(OutputImage, pixel_coords, packIndex(0));
 }
