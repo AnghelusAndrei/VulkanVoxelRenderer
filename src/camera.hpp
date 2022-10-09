@@ -8,7 +8,6 @@ class Camera{
     public:
         struct Properties{
             uint8_t FOV = 90;
-            uint8_t projection = PERSPECTIVE;
         };
 
         struct keyLayout{
@@ -22,18 +21,13 @@ class Camera{
             uint16_t y_axis_direction;
         };
 
-        void Setup(GLFWwindow *window_, Stats *stats_, Properties *properties_, glm::vec3 position_, glm::vec3 direction_);
+        Camera(GLFWwindow *window_, Stats *stats_, Properties *properties_, glm::vec3 position_, glm::vec3 direction_);
         void FirstPersonHandler(const keyLayout &layout, float speed, glm::vec3 up, double Sensitivity);
 
     public:
         glm::vec3 position = glm::vec3(0,0,0);
         glm::vec3 direction = glm::vec3(1,0,0);
         Properties *properties;
-
-        enum ProjectionEnums{
-            PERSPECTIVE = 0,
-            ORTHOGRAPHIC = 1
-        };
 
         enum keyEnum{
             MOUSE_X = 0,

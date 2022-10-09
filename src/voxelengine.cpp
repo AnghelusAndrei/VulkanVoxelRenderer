@@ -1,4 +1,5 @@
 #include "voxelengine.hpp"
+#include "camera.hpp"
 
 VoxelEngine::VoxelEngine(Config config) : config_(config)
 {
@@ -28,9 +29,19 @@ void VoxelEngine::run()
     //std::thread inputThread();
     std::thread renderThread(&VulkanInstance::run, instance_);
 
+    Stats stats;
+    Camera::Properties properties = {
+        .FOV = 90
+    };
+    glm::vec3 initialPosition = glm::vec3(0,0,0);
+    glm::vec3 initialDirection = glm::vec3(1,0,0);
+
     Octree *octree = new Octree(4);
+    Camera *camera = new Camera(window, &stats, &properties, initialPosition, initialDirection);
+
     Octree::Node node;
     node.isNode=false;
+    node.leaf.type = Octree::DEFAULT;
     glm::u8vec3 rgb = glm::u8vec3(255, 0, 0);
     node.leaf.data=Octree::utils_rgb(rgb.r, rgb.g, rgb.b);
 

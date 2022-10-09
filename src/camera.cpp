@@ -1,7 +1,7 @@
 #include "camera.hpp"
 
 
-void Camera::Setup(GLFWwindow *window_, Stats *stats_, Properties *properties_, glm::vec3 position_, glm::vec3 direction_){
+Camera::Camera(GLFWwindow *window_, Stats *stats_, Properties *properties_, glm::vec3 position_, glm::vec3 direction_){
     window_p = window_;
     stats_p = stats_;
     properties = properties_;

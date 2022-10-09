@@ -183,6 +183,7 @@ VulkanInstance::~VulkanInstance()
     utils_destroyBuffer(stagingBuffer_);
     utils_destroyBuffer(octreeBuffer_);
     utils_destroyBuffer(lightingBuffer_);
+    utils_destroyBuffer(uniformBuffer_);
     vmaDestroyAllocator(allocator_);
     device_.destroy();
     instance_.destroyDebugUtilsMessengerEXT(debugMessenger_, nullptr, dispatch_);

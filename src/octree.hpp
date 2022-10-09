@@ -28,8 +28,12 @@ public:
                 unsigned type : 7;
                 unsigned data: 24;
             } leaf;
-
         };
+    };
+
+    enum TYPES{
+        EMPTY = 0,
+        DEFAULT = 1
     };
 
     Octree(uint32_t depth);
@@ -53,5 +57,5 @@ private:
 
     uint32_t utils_p2r[maxDepth];
     uint32_t utils_locate(glm::uvec3 position, uint32_t depth);
-    bool areContained(glm::uvec3 position1, glm::uvec3 position2, uint32_t depth);
+    bool contained(glm::uvec3 position1, glm::uvec3 position2, uint32_t depth);
 };

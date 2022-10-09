@@ -4,6 +4,7 @@
 #include "config.hpp"
 
 #include "vulkaninstance.hpp"
+
 class Object;
 class Octree;
 

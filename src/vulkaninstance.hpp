@@ -33,7 +33,7 @@
 #include "logging.hpp"
 #include "octree.hpp"
 //#include "camera.hpp"
-//#include "stats.hpp"
+#include "stats.hpp"
 //#include "object.hpp"
 //#include "materials.hpp"
 //#include "lights.hpp"

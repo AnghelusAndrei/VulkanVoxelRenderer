@@ -47,7 +47,7 @@ uint32_t Octree::utils_locate(glm::uvec3 position, uint32_t depth)
 #endif
     return (((bool)(position.x & utils_p2r[depth])) << 2) | ((bool)((position.y & utils_p2r[depth])) << 1) |((bool)(position.z & utils_p2r[depth]));
 }
-bool Octree::areContained(glm::uvec3 position1, glm::uvec3 position2, uint32_t depth){
+bool Octree::contained(glm::uvec3 position1, glm::uvec3 position2, uint32_t depth){
     return ((position1.x / utils_p2r[depth] == position2.x / utils_p2r[depth]) && (position1.y / utils_p2r[depth] == position2.y / utils_p2r[depth]) && (position1.z / utils_p2r[depth] == position2.z / utils_p2r[depth]));
 }
 uint32_t Octree::lookup(glm::uvec3 position)
@@ -249,7 +249,7 @@ void Octree::move(glm::uvec3 position1, glm::uvec3 position2){
         depth--;
     } 
 
-    while(!areContained(position1, position2, depth)){
+    while(!contained(position1, position2, depth)){
         localNodes.pop();
         depth--;
     }
@@ -297,7 +297,7 @@ void Octree::move(glm::uvec3 position1, glm::uvec3 position2, std::function<int(
     uint32_t v1_id = offset + utils_locate(position1, depth_);
 
     //search for position2
-    while(!areContained(position1, position2, depth)){
+    while(!contained(position1, position2, depth)){
         localNodes.pop();
         depth--;
     }
