@@ -27,31 +27,64 @@ struct OctreeData_t{
     uint n;
 } OctreeData;
 
+#define B(x) S_to_binary(#x)
+
+static inline unsigned long long S_to_binary(const char *s){
+    unsigned long long i = 0;
+    while(*s){
+        i<<=1;
+        i+=*s++ - '0';
+    }
+    return i;
+}
+
+struct Bitmask{
+    uint isNode_mask;
+    uint n_count_mask;
+    uint n_next_mask;
+    uint l_type_mask;
+    uint l_data_x_mask;
+    uint l_data_y_mask;
+    uint l_data_z_mask;
+} nodemask;
+
 struct Node{
     bool isNode; // 1 bit
-
     int n_count; // 3 bits
     uint n_next; // 28 bits
-
     int l_type; // 7 bits
     uvec3 l_data; // 24 bits
 };
 
+Bitmask setmasks(){
+    Bitmask m;
+
+    m.isNode_mask = B(0000000000000000000000000000001);
+    m.n_count_mask = B(0000000000000000000000000001110);
+    m.n_next_mask = B(1111111111111111111111111110000);
+    m.l_type_mask = B(0000000000000000000000011111110);
+    m.l_data_x_mask = B(0000000000000001111111100000000);
+    m.l_data_y_mask = B(0000000111111110000000000000000);
+    m.l_data_z_mask = B(1111111100000000000000000000000);
+
+    return m;
+}
+
 Node readNode(uint data){
     Node node;
-    node.isNode = bool(data >> 31);
+    node.isNode = bool(data & nodemask.isNode_mask);
 
     if(node.isNode){
-        node.n_count = int(data << 1 >> 29);
-        node.n_next = uint(data << 4 >> 4);
+        node.n_count = int(data & nodemask.n_count_mask >> 1);
+        node.n_next = uint(data & nodemask.n_next_mask >> 4);
 
         return node;
     }
 
-    node.l_type = int(data << 1 >> 25);
-    node.l_data.x = uint(data << 8*1 >> 8*3);
-    node.l_data.y = uint(data << 8*2 >> 8*3);
-    node.l_data.z = uint(data << 8*3 >> 8*3);
+    node.l_type = int(data & nodemask.l_type_mask >> 1);
+    node.l_data.x = uint(data & nodemask.l_data_x_mask >> 8);
+    node.l_data.y = uint(data & nodemask.l_data_y_mask >> 16);
+    node.l_data.z = uint(data & nodemask.l_data_z_mask >> 24);
 
     return node;
 }
@@ -283,6 +316,7 @@ voxel_t Raycast(ray_t ray){
 
 void main()
 {
+    nodemask = setmasks();
     ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
 
     uint p2r = 1;
