@@ -17,7 +17,6 @@ void VulkanInstance::run()
 {
     while (engine_->running_)
     {
-        glfwPollEvents();
         render();
     }
 }
@@ -59,17 +58,19 @@ void VulkanInstance::render()
     else
         submitInfo.pCommandBuffers = &commandBuffers_[imageIndex];
     upload_ = false;
-    uploadMutex_.unlock();
+    
     vk::Semaphore signalSemaphores[] = {renderFinishedSemaphores_[currentFrame_]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
+    CameraUBO ubo = camera_->getUBO();
 
+    memcpy(uniformBuffers_[imageIndex].allocationInfo.pMappedData, &ubo,  sizeof(UBO));
     device_.resetFences(1, &inFlightFences_[currentFrame_]);
     if (computeQueue_.submit(1, &submitInfo, inFlightFences_[currentFrame_]) != vk::Result::eSuccess)
     {
         throw std::runtime_error("failed to submit draw command buffer!");
     }
-
+    uploadMutex_.unlock();
     vk::PresentInfoKHR presentInfo{}; // VK_STRUCTURE_TYPE_PRESENT_INFO_KHR
 
     presentInfo.waitSemaphoreCount = 1;
@@ -138,6 +139,10 @@ void VulkanInstance::update()
     device_.destroyDescriptorPool(lightingPool_);
     device_.destroyDescriptorPool(raycastPool_);
     device_.destroyCommandPool(commandPool_);
+    for(auto buffer:uniformBuffers_)
+    {
+        utils_destroyBuffer(buffer);
+    }
     createSwapchainObjects();
 }
 VulkanInstance::~VulkanInstance()
@@ -183,7 +188,8 @@ VulkanInstance::~VulkanInstance()
     utils_destroyBuffer(stagingBuffer_);
     utils_destroyBuffer(octreeBuffer_);
     utils_destroyBuffer(lightingBuffer_);
-    utils_destroyBuffer(uniformBuffer_);
+    for(auto buffer: uniformBuffers_)
+    utils_destroyBuffer(buffer);
     vmaDestroyAllocator(allocator_);
     device_.destroy();
     instance_.destroyDebugUtilsMessengerEXT(debugMessenger_, nullptr, dispatch_);
@@ -331,7 +337,6 @@ void VulkanInstance::createPermanentObjects()
         throw EXCEPTION("Failed to create allocator", result);
 
     stagingBuffer_ = utils_createBuffer(65536, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
-    uniformBuffer_ = utils_createBuffer(uniformSize, vk::BufferUsageFlagBits::eUniformBuffer, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
     octreeBuffer_ = utils_createBuffer(65536, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     lightingBuffer_ = utils_createBuffer(65536, vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
@@ -391,6 +396,12 @@ void VulkanInstance::createSwapchainObjects()
     LOGGING->info() << "Created swapchain" << std::endl;
     images_ = device_.getSwapchainImagesKHR(swapChain_);
     imageViews_.resize(images_.size());
+    uniformBuffers_.resize(images_.size());
+    for(int i=0;i<images_.size();i++)
+    {
+        uniformBuffers_[i]=utils_createBuffer(sizeof(UBO), vk::BufferUsageFlagBits::eUniformBuffer, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
+    }
+    LOGGING->info() << "Create uniform buffers" << std::endl;
     raycastPool_ = utils_createDescriptorPool({vk::DescriptorType::eUniformBuffer, vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageImage});
     lightingPool_ = utils_createDescriptorPool({vk::DescriptorType::eUniformBuffer, vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageBuffer});
     renderPool_ = utils_createDescriptorPool({vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageImage});
@@ -450,7 +461,7 @@ void VulkanInstance::createSwapchainObjects()
     for (size_t i = 0; i < images_.size(); i++)
     {
         vk::DescriptorBufferInfo uniformBufferInfo{};
-        uniformBufferInfo.buffer = uniformBuffer_.buffer;
+        uniformBufferInfo.buffer = uniformBuffers_[i].buffer;
         uniformBufferInfo.range = VK_WHOLE_SIZE;
         vk::DescriptorBufferInfo octreeBufferInfo{};
         octreeBufferInfo.buffer = octreeBuffer_.buffer;
@@ -475,7 +486,7 @@ void VulkanInstance::createSwapchainObjects()
     for (size_t i = 0; i < images_.size(); i++)
     {
         vk::DescriptorBufferInfo uniformBufferInfo{};
-        uniformBufferInfo.buffer = uniformBuffer_.buffer;
+        uniformBufferInfo.buffer = uniformBuffers_[i].buffer;
         uniformBufferInfo.range = VK_WHOLE_SIZE;
         vk::DescriptorBufferInfo octreeBufferInfo{};
         octreeBufferInfo.buffer = octreeBuffer_.buffer;
@@ -625,8 +636,7 @@ void VulkanInstance::createSwapchainObjects()
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, octreeBuffer_.buffer, 0, 65536},
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, uniformBuffer_.buffer, 0, uniformSize}},
+                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, octreeBuffer_.buffer, 0, 65536}},
                                            std::vector<vk::ImageMemoryBarrier>{
                                                {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, raycastPipeline_);
@@ -666,8 +676,7 @@ void VulkanInstance::createSwapchainObjects()
         commandBuffers_[i].copyBuffer(stagingBuffer_.buffer, octreeBuffer_.buffer, vk::BufferCopy{0, 0, 65536});
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, octreeBuffer_.buffer, 0, 65536},
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, uniformBuffer_.buffer, 0, uniformSize}},
+                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, octreeBuffer_.buffer, 0, 65536}},
                                            std::vector<vk::ImageMemoryBarrier>{
                                                {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i - images_.size()], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, raycastPipeline_);

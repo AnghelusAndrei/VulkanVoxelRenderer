@@ -2,6 +2,7 @@
 
 #include <stack>
 #include <functional>
+#include <cstdlib>
 
 #include "vulkaninstance.hpp"
 
@@ -36,6 +37,8 @@ public:
         DEFAULT = 1
     };
 
+    Node *nodes_;
+
     Octree(uint32_t depth);
     void upload(VulkanInstance *instance);
 
@@ -52,7 +55,6 @@ private:
     size_t capacity_ = 0;
     const uint32_t depth_;
     uint32_t newNode = 0;
-    Node *nodes_;
     std::stack<uint32_t> freeNodes;
 
     uint32_t utils_p2r[maxDepth];

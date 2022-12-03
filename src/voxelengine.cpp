@@ -13,47 +13,35 @@ VoxelEngine::VoxelEngine(Config config) : config_(config)
     glfwSetFramebufferSizeCallback(window, framebuffer_resized);
     glfwSetWindowMaximizeCallback(window, window_maximized);
     instance_ = new VulkanInstance(this);
-
-    maxThreads_p = std::thread::hardware_concurrency();
-    LOGGING->verbose() << "Found " << maxThreads_p << " threads on the CPU" << std::endl;
-#ifdef MULTITHREADED
-    LOGGING->verbose() << "Running using multithreading" << std::endl;
-#else
-    LOGGING->verbose() << "Running without multithreading" << std::endl;
-#endif
 }
 
 void VoxelEngine::run()
 {
     running_=true;
-    //std::thread inputThread();
-    std::thread renderThread(&VulkanInstance::run, instance_);
+  
 
-    Stats stats;
-    Camera::Properties properties = {
-        .FOV = 90
-    };
-    glm::vec3 initialPosition = glm::vec3(0,0,0);
+
+    glm::vec3 initialPosition = glm::vec3(1,0,1);
     glm::vec3 initialDirection = glm::vec3(1,0,0);
 
-    Octree *octree = new Octree(4);
-    Camera *camera = new Camera(window, &stats, &properties, initialPosition, initialDirection);
-
+    Octree *octree = new Octree(3);
+    Camera *camera = new Camera(window, initialPosition, initialDirection);
+    instance_->setCamera(camera);
+    std::thread renderThread(&VulkanInstance::run, instance_);
     Octree::Node node;
     node.isNode=false;
     node.leaf.type = Octree::DEFAULT;
-    glm::u8vec3 rgb = glm::u8vec3(255, 0, 0);
+    glm::u8vec3 rgb = glm::u8vec3(255, 255, 255);
     node.leaf.data=Octree::utils_rgb(rgb.r, rgb.g, rgb.b);
 
-    octree->insert({1,0,0}, node);
-    octree->insert({1,0,1}, node);
-    octree->insert({1,1,0}, node);
-    octree->insert({0,0,1}, node);
+    octree->insert({2,0,0}, node);
+    
     octree->upload(instance_);
-
+    
     while (!glfwWindowShouldClose(window))
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        camera->input();
+        glfwPollEvents();
     }
     running_=false;
     renderThread.join();

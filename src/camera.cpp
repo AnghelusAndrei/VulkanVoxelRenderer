@@ -1,47 +1,65 @@
 #include "camera.hpp"
 
 
-Camera::Camera(GLFWwindow *window_, Stats *stats_, Properties *properties_, glm::vec3 position_, glm::vec3 direction_){
-    window_p = window_;
-    stats_p = stats_;
-    properties = properties_;
+Camera::Camera(GLFWwindow *window,  glm::vec3 position_, glm::vec3 direction_){
+    window_ = window;
     position = position_;
     direction = direction_;
+    speed=SETTINGS->get<double>("speed", 10.0);
 }
 
-void Camera::FirstPersonHandler(const keyLayout &layout, float speed, glm::vec3 up, double Sensitivity){
-    up = glm::normalize(up);
-    if(glfwGetKey(window_p, layout.up) == GLFW_PRESS)//up movement
-        position += (float)((*stats_p).MS*speed) * up;
+
+void Camera::input(){
+    std::lock_guard<std::mutex> lock(uboMutex_);
+    glm::vec3 up = glm::vec3(0,1,0);
+
     
-    if(glfwGetKey(window_p, layout.down) == GLFW_PRESS)//down movement
-        position -= (float)((*stats_p).MS*speed) * up;
+    double time=glfwGetTime();
+    double deltaTime=time-lastTime_;
+    lastTime_=glfwGetTime();
+    if(glfwGetKey(window_, SETTINGS->get<int64_t>("up",GLFW_KEY_SPACE)) == GLFW_PRESS)//up movement
+        position += (float)(deltaTime*speed) * up;
+    
+    if(glfwGetKey(window_, SETTINGS->get<int64_t>("down",GLFW_KEY_LEFT_SHIFT)) == GLFW_PRESS)//down movement
+        position -= (float)(deltaTime*speed) * up;
 
-    if(glfwGetKey(window_p, layout.forward) == GLFW_PRESS)//forward movement
-        position += (float)((*stats_p).MS*speed) * direction;
+    if(glfwGetKey(window_, SETTINGS->get<int64_t>("forward",GLFW_KEY_W)) == GLFW_PRESS)//forward movement
+        position += (float)(deltaTime*speed) * direction;
 
-    if(glfwGetKey(window_p, layout.backward) == GLFW_PRESS)//backward movement
-        position -= (float)((*stats_p).MS*speed) * direction;
+    if(glfwGetKey(window_, SETTINGS->get<int64_t>("backward", GLFW_KEY_S)) == GLFW_PRESS)//backward movement
+        position -= (float)(deltaTime*speed) * direction;
 
-    if(glfwGetKey(window_p, layout.left) == GLFW_PRESS)//left movement
-        position += (float)((*stats_p).MS*speed) * glm::normalize(glm::cross(up, direction));
+    if(glfwGetKey(window_, SETTINGS->get<int64_t>("left",GLFW_KEY_A)) == GLFW_PRESS)//left movement
+        position += (float)(deltaTime*speed) * glm::normalize(glm::cross(up, direction));
 
-    if(glfwGetKey(window_p, layout.right) == GLFW_PRESS)//right movement
-        position += (float)((*stats_p).MS*speed) * glm::normalize(glm::cross(direction, up));
+    if(glfwGetKey(window_, SETTINGS->get<int64_t>("right",GLFW_KEY_D)) == GLFW_PRESS)//right movement
+        position += (float)(deltaTime*speed) * glm::normalize(glm::cross(direction, up));
 
     static glm::dvec2 newMouse;
-    if(layout.x_axis_direction == MOUSE_X && layout.y_axis_direction == MOUSE_Y)
-        glfwGetCursorPos(window_p, &newMouse.x, &newMouse.y);
-    
-    else if(layout.x_axis_direction == MOUSE_Y && layout.y_axis_direction == MOUSE_X)
-        glfwGetCursorPos(window_p, &newMouse.y, &newMouse.x);
 
-    glm::dvec2 delta = {newMouse.x - mousePosition_p.x, newMouse.y - mousePosition_p.y};
-    mousePosition_p = {newMouse.x,newMouse.y};
+    glfwGetCursorPos(window_, &newMouse.x, &newMouse.y);
+    glfwGetCursorPos(window_, &newMouse.y, &newMouse.x);
 
-    if((rotation_p + delta * Sensitivity * (*stats_p).MS).y > 80 || (rotation_p + delta * Sensitivity * (*stats_p).MS).y < -80) return;
+    glm::dvec2 delta = {newMouse.x - mousePosition_.x, newMouse.y - mousePosition_.y};
+    mousePosition_ = {newMouse.x,newMouse.y};
+
+    if((rotation_ + delta * 0.1 * deltaTime).y > 80 || (rotation_ + delta * 0.1 * deltaTime).y < -80) return;
     
-    rotation_p += delta * Sensitivity * (*stats_p).MS;
-    direction = glm::rotate({1,0,0}, (float)-glm::radians(rotation_p.x), up);
-    direction = glm::rotate(direction, (float)glm::radians(rotation_p.y), glm::normalize(glm::cross({0,1,0}, direction)));
+    rotation_+= delta * 0.1 * deltaTime;
+    direction = glm::rotate({1,0,0}, (float)-glm::radians(rotation_.x), up);
+    direction = glm::rotate(direction, (float)glm::radians(rotation_.y), glm::normalize(glm::cross({0,1,0}, direction)));
+
+}
+
+CameraUBO Camera::getUBO(){
+    std::lock_guard<std::mutex> lock(uboMutex_);
+    CameraUBO cameraData;
+    cameraData.position = position;
+    cameraData.direction = direction;
+    int width,height;
+    glfwGetWindowSize(window_, &width, &height);
+    cameraData.cameraPlanVector = direction * (float)(SETTINGS->get<double>("FOV", 90.0)/2) * (width/2.0f);
+    cameraData.cameraPlanSurfaceRightVector = glm::normalize(glm::cross(glm::vec3(0,-1,0), cameraData.cameraPlanVector));
+    cameraData.cameraPlanSurfaceUpVector = glm::normalize(glm::cross(cameraData.cameraPlanSurfaceRightVector, cameraData.cameraPlanVector));
+    return cameraData;
 }

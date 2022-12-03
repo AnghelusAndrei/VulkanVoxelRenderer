@@ -32,13 +32,13 @@
 #include "voxelengine.hpp"
 #include "logging.hpp"
 #include "octree.hpp"
-//#include "camera.hpp"
+#include "camera.hpp"
 #include "stats.hpp"
-//#include "object.hpp"
-//#include "materials.hpp"
-//#include "lights.hpp"
-//#include "objectCollection.hpp"
-//#include "utils.hpp"
+// #include "object.hpp"
+// #include "materials.hpp"
+// #include "lights.hpp"
+// #include "objectCollection.hpp"
+// #include "utils.hpp"
 
 #define MULTITHREADED
 
@@ -46,18 +46,31 @@
  * @brief Represents all rendering infrastructure
  *
  */
+struct CameraUBO
+{
+    glm::vec3 position;
+    glm::vec3 direction;
+    glm::vec3 cameraPlanVector;
+    glm::vec3 cameraPlanSurfaceRightVector;
+    glm::vec3 cameraPlanSurfaceUpVector;
+};
+struct UBO
+{
+    CameraUBO camera;
+};
 class VoxelEngine;
 class Octree;
+class Camera;
 class VulkanInstance
 {
 public:
     VulkanInstance(VoxelEngine *engine);
     void run();
     void render();
-
+    void setCamera(Camera *camera) { camera_ = camera; }
     ~VulkanInstance();
     void update();
-protected:
+
     struct VmaBuffer
     {
         vk::Buffer buffer;
@@ -65,7 +78,9 @@ protected:
         VmaAllocationInfo allocationInfo;
     };
     VmaBuffer stagingBuffer_;
+
 private:
+    Camera *camera_;
     struct QueueSupportDetails
     {
         std::optional<uint32_t> computeFamily;
@@ -101,6 +116,7 @@ private:
         LightingSpecialization lighting;
         RenderSpecialization render;
     };
+
     VoxelEngine *engine_;
     vk::Instance instance_;
     vk::DispatchLoaderDynamic dispatch_;
@@ -112,10 +128,9 @@ private:
     VmaAllocator allocator_;
     std::mutex uploadMutex_;
     bool upload_;
-    VmaBuffer uniformBuffer_, octreeBuffer_, lightingBuffer_;
-
+    VmaBuffer octreeBuffer_, lightingBuffer_;
+    std::vector<VmaBuffer> uniformBuffers_;
     size_t currentFrame_ = 0;
-    size_t uniformSize=512;
     vk::CommandPool commandPool_;
     vk::DescriptorPool raycastPool_, lightingPool_, renderPool_;
     vk::SwapchainKHR swapChain_;
@@ -149,7 +164,6 @@ private:
         "VK_LAYER_KHRONOS_validation"};
     const std::vector<const char *> utils_deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-
 
     friend class VoxelEngine;
     friend class Octree;

@@ -1,6 +1,6 @@
 #include "octree.hpp"
 
-//#define DEBUG
+
 
 Octree::Octree(uint32_t depth) : depth_(depth)
 {
@@ -18,22 +18,22 @@ Octree::Octree(uint32_t depth) : depth_(depth)
     }
     LOGGING->info() << "Allocating nodes "<< capacity_ << '\n';
     capacity_ = 65536;
-    nodes_ = new Node[capacity_];
+    nodes_ =(Node*)calloc(capacity_, sizeof(Node));
     LOGGING->info() << "Allocated nodes" << '\n';
 }
-
+#define DEBUG
 void Octree::upload(VulkanInstance *instance)
 {
     instance->uploadMutex_.lock();
     instance->upload_ = true;
 #ifdef DEBUG
-    for(int i=0;i<newNode;i++)
+    for(int i=0;i<100;i++)
     {
         if(!nodes_[i].isNode)
         {
             LOGGING->print(VERBOSE) << std::hex << nodes_[i].leaf.data << ' ';
 
-        }else LOGGING->print(VERBOSE) << nodes_[i].node.next << ' ';
+        }else LOGGING->print(VERBOSE) << std::dec<< nodes_[i].node.next << ' ';
         if((i-1)%8==0&&i>1) LOGGING->print(VERBOSE) << '\n';
     }
 #endif
@@ -42,11 +42,9 @@ void Octree::upload(VulkanInstance *instance)
 }
 uint32_t Octree::utils_locate(glm::uvec3 position, uint32_t depth)
 {
-#ifdef DEBUG
-    LOGGING->verbose() << "AND:  " << (position.x & utils_p2r[depth]) << (position.y & utils_p2r[depth]) << (position.z & utils_p2r[depth])<<'\n';
-#endif
     return (((bool)(position.x & utils_p2r[depth])) << 2) | ((bool)((position.y & utils_p2r[depth])) << 1) |((bool)(position.z & utils_p2r[depth]));
 }
+
 bool Octree::contained(glm::uvec3 position1, glm::uvec3 position2, uint32_t depth){
     return ((position1.x / utils_p2r[depth] == position2.x / utils_p2r[depth]) && (position1.y / utils_p2r[depth] == position2.y / utils_p2r[depth]) && (position1.z / utils_p2r[depth] == position2.z / utils_p2r[depth]));
 }
@@ -70,9 +68,6 @@ void Octree::insert(glm::uvec3 position, Node data)
     for (int depth = 1; depth < depth_; depth++)
     {
         offset += utils_locate(position, depth);
-#ifdef DEBUG
-        LOGGING->verbose() << "Offset: " << offset <<'\n'; 
-#endif
         Node leaf = nodes_[offset];
         if(!leaf.isNode){
             uint32_t nextOffset;
@@ -108,9 +103,6 @@ void Octree::insert(glm::uvec3 position, Node data, std::function<bool(uint8_t)>
     for (int depth = 1; depth < depth_; depth++)
     {
         offset += utils_locate(position, depth);
-#ifdef DEBUG
-        LOGGING->verbose() << "Offset: " << offset <<'\n'; 
-#endif
         Node leaf = nodes_[offset];
         if(!leaf.isNode){
             uint32_t nextOffset;
