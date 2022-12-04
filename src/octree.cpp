@@ -27,7 +27,7 @@ void Octree::upload(VulkanInstance *instance)
     instance->uploadMutex_.lock();
     instance->upload_ = true;
 #ifdef DEBUG
-    for(int i=0;i<100;i++)
+    /*for(int i=0;i<100;i++)
     {
         if(!nodes_[i].isNode)
         {
@@ -35,7 +35,7 @@ void Octree::upload(VulkanInstance *instance)
 
         }else LOGGING->print(VERBOSE) << std::dec<< nodes_[i].node.next << ' ';
         if((i-1)%8==0&&i>1) LOGGING->print(VERBOSE) << '\n';
-    }
+    }*/
 #endif
     memcpy(instance->stagingBuffer_.allocationInfo.pMappedData, nodes_, capacity_);
     instance->uploadMutex_.unlock();

@@ -114,6 +114,107 @@ uvec2 lookup(vec3 position){
     }
 }
 
+voxel_t Testcast(ray_t ray){
+    voxel_t voxel;
+    
+    voxel.hit = false;
+    voxel.id = 0;
+
+    vec3 r_pos = ray.origin;
+    bvec3 found = bvec3(1,1,1);
+    vec3 v_add = vec3(0,0,0);
+    vec3 x,y,z;
+    int q = 0;
+
+    x = vec3(0,0,0);
+    y = vec3(0,0,0);
+    z = vec3(0,0,0);
+
+    //intersect bounds
+    while(!inBounds(r_pos, octreeLength)){
+        if(q > 5)return voxel;
+
+        float d = 1e9;
+        float xD,yD,zD;
+
+        if(found.x == true){
+            if(r_pos.x < 0){
+                if(ray.direction.x <= 0)found.x = false;
+                else{
+                x.x = f_error-r_pos.x;
+                x.y = (x.x*ray.direction.y)/ray.direction.x;
+                x.z = (x.x*ray.direction.z)/ray.direction.x;
+                }
+            }
+            if(r_pos.x > octreeLength){
+                if(ray.direction.x >= 0)found.x = false;
+                else{
+                x.x = octreeLength-f_error-r_pos.x;
+                x.y = (x.x*ray.direction.y)/ray.direction.x;
+                x.z = (x.x*ray.direction.z)/ray.direction.x;
+                }
+            }
+            if(found.x == true){
+                xD = distance(r_pos,r_pos+x);
+                if(xD < d){d = xD; v_add = x;}
+            }
+        }
+
+
+        if(found.y == true){
+            if(r_pos.y < 0){
+                if(ray.direction.y <= 0)found.y = false;
+                else{
+                y.y = f_error-r_pos.y;
+                y.x = (y.y*ray.direction.x)/ray.direction.y;
+                y.z = (y.y*ray.direction.z)/ray.direction.y;
+                }
+            }
+            if(r_pos.y > octreeLength){
+                if(ray.direction.y >= 0)found.y = false;
+                else{
+                y.y = octreeLength-f_error-r_pos.y;
+                y.x = (y.y*ray.direction.x)/ray.direction.y;
+                y.z = (y.y*ray.direction.z)/ray.direction.y;
+                }
+            }
+            if(found.y == true){
+                yD = distance(r_pos,r_pos+y);
+                if(yD < d){d = yD; v_add = y;}
+            }
+        }
+
+
+        if(found.z == true){
+            if(r_pos.z < 0){
+                if(ray.direction.z <= 0)found.z = false;
+                else{
+                z.z = f_error-r_pos.z;
+                z.x = (z.z*ray.direction.x)/ray.direction.z;
+                z.y = (z.z*ray.direction.y)/ray.direction.z;
+                }
+            }
+            if(r_pos.z > octreeLength){
+                if(ray.direction.z >= 0)found.z = false;
+                else{
+                z.z = octreeLength-f_error-r_pos.z;
+                z.x = (z.z*ray.direction.x)/ray.direction.z;
+                z.y = (z.z*ray.direction.y)/ray.direction.z;
+                }
+            }
+            if(found.z == true){
+                zD = distance(r_pos,r_pos+z);
+                if(zD < d){d = zD; v_add = z;}
+            }
+        }
+
+        r_pos += v_add;
+        q++;
+    }
+    voxel.hit = true;
+    voxel.id = 16;
+}
+
 voxel_t Raycast(ray_t ray){
     voxel_t voxel;
 
@@ -129,6 +230,8 @@ voxel_t Raycast(ray_t ray){
 
     vec3 normal = {0,0,0};
     vec3 r_add  = {0,0,0};
+    bvec3 found = bvec3(0,0,0);
+    vec3 v_add = vec3(0,0,0);
     vec3 x,y,z;
     uint q = 0;
 
@@ -163,93 +266,95 @@ voxel_t Raycast(ray_t ray){
 
         //intersect bounds
         if(!inBounds(r_pos, octreeLength)){
-            bvec3 notfound = bvec3(0,0,0);
 
-            if(r_pos.x < 0){
-                if(ray.direction.x <= 0) notfound.x = true;
-               
-               
-                else 
-                {
-                    x.x=-r_pos.x; + sign(ray.direction.x)*f_error;
-                }
-                
-            }else if(r_pos.x > octreeLength){
-                if(ray.direction.x >= 0)notfound.x = true;
-                else x.x = octreeLength-r_pos.x + sign(ray.direction.x)*f_error;
-            }
-
-            if(r_pos.y < 0){
-                if(ray.direction.y <= 0)notfound.y = true;
-                else y.y = -r_pos.y + sign(ray.direction.y)*f_error;
-            }else if(r_pos.y > octreeLength){
-                if(ray.direction.y >= 0)notfound.y = true;
-                else y.y = octreeLength-r_pos.y + sign(ray.direction.y)*f_error;
-            }
-
-            if(r_pos.z < 0){
-                if(ray.direction.z <= 0)notfound.z = true;
-                else z.z = -r_pos.z + sign(ray.direction.z)*f_error;
-            }else if(r_pos.z > octreeLength){
-                if(ray.direction.z >= 0)notfound.z = true;
-                else z.z = octreeLength-r_pos.z + sign(ray.direction.z)*f_error;
-            }
-
-            voxel.hit = false;
-
-            if(!notfound.x){
-                voxel.hit = true;
-                x.y = (x.x*ray.direction.y)/ray.direction.x;
-                x.z = (x.x*ray.direction.z)/ray.direction.x;
-            }else{
-                x.x = 1e8;
-            }
-
-            if(!notfound.y){
-                voxel.hit = true;
-                y.x = (y.y*ray.direction.x)/ray.direction.y;
-                y.z = (y.y*ray.direction.z)/ray.direction.y;
-            }else{
-                y.y = 1e8;
-            }
-
-            if(!notfound.z){
-                voxel.hit = true;
-                z.x = (z.z*ray.direction.x)/ray.direction.z;
-                z.y = (z.z*ray.direction.y)/ray.direction.z;
-            }else{
-                z.z = 1e8;
-            }
-
-            if(voxel.hit != true)
-                return voxel;
-            
-            voxel.hit = false;
-
-
-            if(length(x) < length(y) && length(x) < length(z))r_add = x;
-            else if(length(y) < length(x) && length(y) < length(z))r_add = y;
-            else r_add = z;
-
-
-            
-
-            /*for (depth; depth <= octreeDepth; depth++)
-            {
-                offset += utils_locate(uvec3(r_pos), depth);
-
-                Node leaf = readNode(octree.data[offset]);
-                if(!leaf.isNode){
-                    if(leaf.l_type == 1){
-                        voxel.id = offset;
-                        voxel.hit = true;
-                        return voxel;
+            if(found.x == true){
+                if(r_pos.x < 0){
+                    if(ray.direction.x <= 0)found.x = false;
+                    else{
+                    x.x = f_error-r_pos.x;
+                    x.y = (x.x*ray.direction.y)/ray.direction.x;
+                    x.z = (x.x*ray.direction.z)/ray.direction.x;
                     }
-                    break;
                 }
-                nodeStack[depth] = leaf.n_next;
-                offset = leaf.n_next;
-            }*/
+                if(r_pos.x > octreeLength){
+                    if(ray.direction.x >= 0)found.x = false;
+                    else{
+                    x.x = octreeLength-f_error-r_pos.x;
+                    x.y = (x.x*ray.direction.y)/ray.direction.x;
+                    x.z = (x.x*ray.direction.z)/ray.direction.x;
+                    }
+                }
+                if(found.x == true){
+                    xD = distance(r_pos,r_pos+x);
+                    if(xD < d){d = xD; v_add = x;}
+                }
+            }
+
+
+            if(found.y == true){
+                if(r_pos.y < 0){
+                    if(ray.direction.y <= 0)found.y = false;
+                    else{
+                    y.y = f_error-r_pos.y;
+                    y.x = (y.y*ray.direction.x)/ray.direction.y;
+                    y.z = (y.y*ray.direction.z)/ray.direction.y;
+                    }
+                }
+                if(r_pos.y > octreeLength){
+                    if(ray.direction.y >= 0)found.y = false;
+                    else{
+                    y.y = octreeLength-f_error-r_pos.y;
+                    y.x = (y.y*ray.direction.x)/ray.direction.y;
+                    y.z = (y.y*ray.direction.z)/ray.direction.y;
+                    }
+                }
+                if(found.y == true){
+                    yD = distance(r_pos,r_pos+y);
+                    if(yD < d){d = yD; v_add = y;}
+                }
+            }
+
+
+            if(found.z == true){
+                if(r_pos.z < 0){
+                    if(ray.direction.z <= 0)found.z = false;
+                    else{
+                    z.z = f_error-r_pos.z;
+                    z.x = (z.z*ray.direction.x)/ray.direction.z;
+                    z.y = (z.z*ray.direction.y)/ray.direction.z;
+                    }
+                }
+                if(r_pos.z > octreeLength){
+                    if(ray.direction.z >= 0)found.z = false;
+                    else{
+                    z.z = octreeLength-f_error-r_pos.z;
+                    z.x = (z.z*ray.direction.x)/ray.direction.z;
+                    z.y = (z.z*ray.direction.y)/ray.direction.z;
+                    }
+                }
+                if(found.z == true){
+                    zD = distance(r_pos,r_pos+z);
+                    if(zD < d){d = zD; v_add = z;}
+                }
+            }
+
+            if((found.x == false && found.y == false && found.z == false) || (v_add.x == 0 && v_add.y == 0 && v_add.z == 0)){
+                return voxel;
+            }else{
+                voxel.id =100;
+                voxel.hit = true;
+                return voxel;
+            }
+ 
+            r_pos = r_pos+v_add;
+            d = 1e9;
+
+            x=vec3(0,0,0);
+            y=vec3(0,0,0);
+            z=vec3(0,0,0);
+            v_add = vec3(0,0,0);
+
+            q++;
         }
 
         //lookup
@@ -281,9 +386,9 @@ voxel_t Raycast(ray_t ray){
 
         leaf_t target;
 
-        target.position.x = r_pos.x - uint(r_pos.x)%lookup_results.y;
-        target.position.y = r_pos.y - uint(r_pos.y)%lookup_results.y;
-        target.position.z = r_pos.z - uint(r_pos.z)%lookup_results.y;
+        target.position.x = uint(r_pos.x) - uint(r_pos.x)%lookup_results.y;
+        target.position.y = uint(r_pos.y) - uint(r_pos.y)%lookup_results.y;
+        target.position.z = uint(r_pos.z) - uint(r_pos.z)%lookup_results.y;
 
 
         target.id = lookup_results.x;
@@ -295,6 +400,8 @@ voxel_t Raycast(ray_t ray){
             voxel.hit = true;
             return voxel;
         }
+
+        v_add = vec3(0,0,0);
 
 
         //tree traversal
@@ -315,7 +422,6 @@ voxel_t Raycast(ray_t ray){
         yD = sqrt(y.x*y.x + y.y*y.y + y.z*y.z);
         zD = sqrt(z.x*z.x + z.y*z.y + z.z*z.z);
 
-        vec3 v_add = vec3(0,0,0);
 
         if(xD < d){
             d = xD; 
@@ -338,6 +444,8 @@ voxel_t Raycast(ray_t ray){
     }
     return voxel;
 }
+
+
 vec4 packIndex(uint index) {
     float x = uintBitsToFloat(index & 0xFF000000);
     float y = uintBitsToFloat(index & 0x00FF0000);
@@ -362,9 +470,10 @@ void main()
     Ray.direction = vector_to_point;
     Ray.max_dist = sqrt(octreeLength*octreeLength+ octreeLength*octreeLength + octreeLength*octreeLength);
     Ray.max_steps = 100;
-    voxel_t voxel = Raycast(Ray);
+    voxel_t voxel = Testcast(Ray);
 
-    lighting.data[voxel.id]=vec4(1, 0,0 ,1);
+    if(voxel.hit)lighting.data[voxel.id]=vec4(1,0,0,1);
+    else lighting.data[voxel.id]=vec4(0,1,0,1);
 
     imageStore(OutputImage, pixel_coords, packIndex(voxel.id));
 }

@@ -49,6 +49,8 @@ void Camera::input(){
     direction = glm::rotate({1,0,0}, (float)-glm::radians(rotation_.x), up);
     direction = glm::rotate(direction, (float)glm::radians(rotation_.y), glm::normalize(glm::cross({0,1,0}, direction)));
 
+    //LOGGING->print(VERBOSE) << position.x << ' ' << position.y << ' ' << position.z << '\n';
+
 }
 
 CameraUBO Camera::getUBO(){
