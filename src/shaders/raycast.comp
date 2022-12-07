@@ -8,7 +8,6 @@ const uvec2 screenSize=uvec2(screenWidth, screenHeight);
 
 layout(set=0, binding=0) uniform UniformBufferObject {
     vec3 position;
-    vec3 direction;
     vec3 cameraPlanVector;
     vec3 cameraPlanSurfaceRightVector;
     vec3 cameraPlanSurfaceUpVector;
@@ -26,7 +25,7 @@ layout(std140, set=0, binding=2) writeonly buffer LightingBuffer {
 layout(rgba8, set=0, binding=3) uniform writeonly image2D OutputImage;
 
 #define max_depth 15
-#define f_error 0.001
+#define f_error 0.1
 
 uint utils_p2r[max_depth];
 uint octreeLength;
@@ -121,7 +120,7 @@ voxel_t Testcast(ray_t ray){
     voxel.id = 0;
 
     vec3 r_pos = ray.origin;
-    bvec3 found = bvec3(1,1,1);
+    bvec3 found = bvec3(true,true,true);
     vec3 v_add = vec3(0,0,0);
     vec3 x,y,z;
     int q = 0;
@@ -132,87 +131,88 @@ voxel_t Testcast(ray_t ray){
 
     //intersect bounds
     while(!inBounds(r_pos, octreeLength)){
-        if(q > 5)return voxel;
+        if(q>5)return voxel;
 
-        float d = 1e9;
-        float xD,yD,zD;
+            float d = 1e9;
+            float xD,yD,zD;
 
-        if(found.x == true){
-            if(r_pos.x < 0){
-                if(ray.direction.x <= 0)found.x = false;
-                else{
-                x.x = f_error-r_pos.x;
-                x.y = (x.x*ray.direction.y)/ray.direction.x;
-                x.z = (x.x*ray.direction.z)/ray.direction.x;
-                }
-            }
-            if(r_pos.x > octreeLength){
-                if(ray.direction.x >= 0)found.x = false;
-                else{
-                x.x = octreeLength-f_error-r_pos.x;
-                x.y = (x.x*ray.direction.y)/ray.direction.x;
-                x.z = (x.x*ray.direction.z)/ray.direction.x;
-                }
-            }
             if(found.x == true){
-                xD = distance(r_pos,r_pos+x);
-                if(xD < d){d = xD; v_add = x;}
-            }
-        }
-
-
-        if(found.y == true){
-            if(r_pos.y < 0){
-                if(ray.direction.y <= 0)found.y = false;
-                else{
-                y.y = f_error-r_pos.y;
-                y.x = (y.y*ray.direction.x)/ray.direction.y;
-                y.z = (y.y*ray.direction.z)/ray.direction.y;
+                if(r_pos.x < 0){
+                    if(ray.direction.x <= 0)found.x = false;
+                    else{
+                    x.x = f_error-r_pos.x;
+                    x.y = (x.x*ray.direction.y)/ray.direction.x;
+                    x.z = (x.x*ray.direction.z)/ray.direction.x;
+                    }
+                }
+                if(r_pos.x > octreeLength){
+                    if(ray.direction.x >= 0)found.x = false;
+                    else{
+                    x.x = octreeLength-f_error-r_pos.x;
+                    x.y = (x.x*ray.direction.y)/ray.direction.x;
+                    x.z = (x.x*ray.direction.z)/ray.direction.x;
+                    }
+                }
+                if(found.x == true){
+                    xD = distance(r_pos,r_pos+x);
+                    if(xD < d){d = xD; v_add = x;}
                 }
             }
-            if(r_pos.y > octreeLength){
-                if(ray.direction.y >= 0)found.y = false;
-                else{
-                y.y = octreeLength-f_error-r_pos.y;
-                y.x = (y.y*ray.direction.x)/ray.direction.y;
-                y.z = (y.y*ray.direction.z)/ray.direction.y;
-                }
-            }
+
+
             if(found.y == true){
-                yD = distance(r_pos,r_pos+y);
-                if(yD < d){d = yD; v_add = y;}
-            }
-        }
-
-
-        if(found.z == true){
-            if(r_pos.z < 0){
-                if(ray.direction.z <= 0)found.z = false;
-                else{
-                z.z = f_error-r_pos.z;
-                z.x = (z.z*ray.direction.x)/ray.direction.z;
-                z.y = (z.z*ray.direction.y)/ray.direction.z;
+                if(r_pos.y < 0){
+                    if(ray.direction.y <= 0)found.y = false;
+                    else{
+                    y.y = f_error-r_pos.y;
+                    y.x = (y.y*ray.direction.x)/ray.direction.y;
+                    y.z = (y.y*ray.direction.z)/ray.direction.y;
+                    }
+                }
+                if(r_pos.y > octreeLength){
+                    if(ray.direction.y >= 0)found.y = false;
+                    else{
+                    y.y = octreeLength-f_error-r_pos.y;
+                    y.x = (y.y*ray.direction.x)/ray.direction.y;
+                    y.z = (y.y*ray.direction.z)/ray.direction.y;
+                    }
+                }
+                if(found.y == true){
+                    yD = distance(r_pos,r_pos+y);
+                    if(yD < d){d = yD; v_add = y;}
                 }
             }
-            if(r_pos.z > octreeLength){
-                if(ray.direction.z >= 0)found.z = false;
-                else{
-                z.z = octreeLength-f_error-r_pos.z;
-                z.x = (z.z*ray.direction.x)/ray.direction.z;
-                z.y = (z.z*ray.direction.y)/ray.direction.z;
-                }
-            }
+
+
             if(found.z == true){
-                zD = distance(r_pos,r_pos+z);
-                if(zD < d){d = zD; v_add = z;}
+                if(r_pos.z < 0){
+                    if(ray.direction.z <= 0)found.z = false;
+                    else{
+                    z.z = f_error-r_pos.z;
+                    z.x = (z.z*ray.direction.x)/ray.direction.z;
+                    z.y = (z.z*ray.direction.y)/ray.direction.z;
+                    }
+                }
+                if(r_pos.z > octreeLength){
+                    if(ray.direction.z >= 0)found.z = false;
+                    else{
+                    z.z = octreeLength-f_error-r_pos.z;
+                    z.x = (z.z*ray.direction.x)/ray.direction.z;
+                    z.y = (z.z*ray.direction.y)/ray.direction.z;
+                    }
+                }
+                if(found.z == true){
+                    zD = distance(r_pos,r_pos+z);
+                    if(zD < d){d = zD; v_add = z;}
+                }
             }
-        }
 
-        r_pos += v_add;
-        q++;
+            r_pos += v_add;
+            q++;
     }
     voxel.hit = true;
     voxel.id = 16;
+    return voxel;
 }
 
 voxel_t Raycast(ray_t ray){
@@ -230,7 +230,7 @@ voxel_t Raycast(ray_t ray){
 
     vec3 normal = {0,0,0};
     vec3 r_add  = {0,0,0};
-    bvec3 found = bvec3(0,0,0);
+    bvec3 found = bvec3(1,1,1);
     vec3 v_add = vec3(0,0,0);
     vec3 x,y,z;
     uint q = 0;
@@ -461,19 +461,36 @@ void main()
 
     octreeLength = 1<<octreeDepth;
 
-    vec2 camera_plan_position = (2*vec2(pixel_coords.xy)/screenSize - vec2(1,1));
-    vec3 camera_point = camera_plan_position.x*ubo.cameraPlanSurfaceRightVector + camera_plan_position.y*ubo.cameraPlanSurfaceUpVector;
-    vec3 vector_to_point = ubo.cameraPlanVector + camera_point*screenWidth;
+    //vec2 camera_plan_position = vec2(2 * (float(pixel_coords.x) / 800.0f) - 1, 2 * (float(pixel_coords.y) / 600.0f) - 1);
+    //vec3 vector_to_point = normalize(ubo.cameraPlanVector + camera_plan_position.x * ubo.cameraPlanSurfaceRightVector + camera_plan_position.y * ubo.cameraPlanSurfaceUpVector);
     
-    ray_t Ray;
+    float f = tan(radians(90.0f/2));
+
+    vec2 PlaneScale;
+    PlaneScale.x = 2 * (pixel_coords.x / 800.0f) - 1;
+    PlaneScale.y = 2 * (pixel_coords.y / 600.0f) - 1;
+
+    float aspectRatio = 600.0f/800.0f;
+    vec3 v_x,v_y, c_y;
+
+    v_x = PlaneScale.x * normalize(cross(vec3(0,1,0), ubo.cameraPlanVector)) * f;
+    c_y = normalize(cross(vec3(0,1,0), ubo.cameraPlanVector));
+    v_y = PlaneScale.y * normalize(cross(c_y, vec3(0,1,0))) * aspectRatio * f;
+
+    vec3 vector = ubo.cameraPlanVector + v_x + v_y;
+    vector = normalize(vector);
+
+    /*ray_t Ray;
     Ray.origin = ubo.position;
-    Ray.direction = vector_to_point;
-    Ray.max_dist = sqrt(octreeLength*octreeLength+ octreeLength*octreeLength + octreeLength*octreeLength);
-    Ray.max_steps = 100;
+    Ray.direction = vector;
+    Ray.max_dist = 5000;
+    Ray.max_steps = 1000;
     voxel_t voxel = Testcast(Ray);
 
-    if(voxel.hit)lighting.data[voxel.id]=vec4(1,0,0,1);
-    else lighting.data[voxel.id]=vec4(0,1,0,1);
+    if(voxel.hit)imageStore(OutputImage, pixel_coords, vec4(1,0,0,1));
+    else imageStore(OutputImage, pixel_coords, vec4(0,1,0,1));*/
 
-    imageStore(OutputImage, pixel_coords, packIndex(voxel.id));
+    imageStore(OutputImage, pixel_coords, vec4(vector,1));
+
+    //imageStore(OutputImage, pixel_coords, packIndex(voxel.id));
 }

@@ -15,8 +15,8 @@ uint unpackIndex(vec4 packedIndex)
 }
 void main()
 {
-    ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
-    vec4 data = imageLoad(OutputImage, pixel_coords);
+    //ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+    //vec4 data = imageLoad(OutputImage, pixel_coords);
     
-    imageStore(OutputImage, pixel_coords, lighting.data[unpackIndex(data)]);
+    //imageStore(OutputImage, pixel_coords, lighting.data[unpackIndex(data)]);
 } 

@@ -21,7 +21,7 @@ void VoxelEngine::run()
   
 
 
-    glm::vec3 initialPosition = glm::vec3(1,0,1);
+    glm::vec3 initialPosition = glm::vec3(0,0,0);
     glm::vec3 initialDirection = glm::vec3(1,0,0);
 
     Octree *octree = new Octree(3);

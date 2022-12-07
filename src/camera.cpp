@@ -35,21 +35,33 @@ void Camera::input(){
     if(glfwGetKey(window_, SETTINGS->get<int64_t>("right",GLFW_KEY_D)) == GLFW_PRESS)//right movement
         position += (float)(deltaTime*speed) * glm::normalize(glm::cross(direction, up));
 
-    static glm::dvec2 newMouse;
+    static glm::dvec2 mouse;
 
-    glfwGetCursorPos(window_, &newMouse.x, &newMouse.y);
-    glfwGetCursorPos(window_, &newMouse.y, &newMouse.x);
-
-    glm::dvec2 delta = {newMouse.x - mousePosition_.x, newMouse.y - mousePosition_.y};
-    mousePosition_ = {newMouse.x,newMouse.y};
-
-    if((rotation_ + delta * 0.1 * deltaTime).y > 80 || (rotation_ + delta * 0.1 * deltaTime).y < -80) return;
+    glfwGetCursorPos(window_, &mouse.x, &mouse.y);
     
-    rotation_+= delta * 0.1 * deltaTime;
-    direction = glm::rotate({1,0,0}, (float)-glm::radians(rotation_.x), up);
-    direction = glm::rotate(direction, (float)glm::radians(rotation_.y), glm::normalize(glm::cross({0,1,0}, direction)));
+    //normal x: up
+    //normal y: glm::normalize(glm::cross({0,1,0}, direction))
 
-    //LOGGING->print(VERBOSE) << position.x << ' ' << position.y << ' ' << position.z << '\n';
+    if(first_frame){
+        first_frame = false;
+
+        start_angle = glm::vec2((float)mouse.x,(float)mouse.y);
+
+        rotation = glm::vec2(0,0);
+    }else{
+        rotation.x = (rotation.x + (mouse.x - start_angle.x) * 0.6);
+        rotation.y = (rotation.y - (mouse.y - start_angle.y) * 0.6);
+
+        direction.x = cosf(glm::radians(rotation.x))*cosf(glm::radians(rotation.y));
+        direction.y = sinf(glm::radians(rotation.y));
+        direction.z = sinf(glm::radians(rotation.x))*cosf(glm::radians(rotation.y));
+
+        direction = glm::normalize(direction);
+
+        start_angle = glm::vec2((float)mouse.x,(float)mouse.y);
+    }
+
+    LOGGING->print(VERBOSE) << direction.x << ' ' << direction.y << ' ' << direction.z << '\n';
 
 }
 
@@ -57,11 +69,13 @@ CameraUBO Camera::getUBO(){
     std::lock_guard<std::mutex> lock(uboMutex_);
     CameraUBO cameraData;
     cameraData.position = position;
+    //int width,height;
+    //glfwGetWindowSize(window_, &width, &height);
+    float aspectRatio = 600.0f/800.0f;
     cameraData.direction = direction;
-    int width,height;
-    glfwGetWindowSize(window_, &width, &height);
-    cameraData.cameraPlanVector = direction * (float)(SETTINGS->get<double>("FOV", 90.0)/2) * (width/2.0f);
-    cameraData.cameraPlanSurfaceRightVector = glm::normalize(glm::cross(glm::vec3(0,-1,0), cameraData.cameraPlanVector));
-    cameraData.cameraPlanSurfaceUpVector = glm::normalize(glm::cross(cameraData.cameraPlanSurfaceRightVector, cameraData.cameraPlanVector));
+    cameraData.cameraPlanVector = direction;
+    cameraData.cameraPlanSurfaceRightVector = glm::normalize(glm::cross(glm::vec3(0,1,0), direction)) * tanf(glm::radians(90.0f/2));
+    cameraData.cameraPlanSurfaceUpVector = glm::normalize(glm::cross(cameraData.cameraPlanSurfaceRightVector, direction)) * aspectRatio * tanf(glm::radians(90.0f/2));
+    //LOGGING->print(VERBOSE) << cameraData.cameraPlanSurfaceUpVector.x << ' ' << cameraData.cameraPlanSurfaceUpVector.y << ' ' << cameraData.cameraPlanSurfaceUpVector.z << '\n';
     return cameraData;
 }

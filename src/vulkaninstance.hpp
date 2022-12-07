@@ -100,7 +100,7 @@ private:
 
     struct RaycastSpecialization
     {
-        uint32_t window_width, window_height;
+        uint32_t window_width, window_height, octreeDepth;
     };
 
     struct LightingSpecialization

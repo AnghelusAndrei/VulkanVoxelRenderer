@@ -25,7 +25,8 @@ class Camera{
         GLFWwindow *window_;
         double speed;
         double lastTime_;
-        glm::dvec2 mousePosition_;
-        glm::dvec2 rotation_;
+        bool first_frame = true;
+        glm::vec2 rotation;
+        glm::vec2 start_angle;
         std::mutex uboMutex_;
 };

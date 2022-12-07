@@ -525,11 +525,15 @@ void VulkanInstance::createSwapchainObjects()
     raycastShaderInfo.stage = vk::ShaderStageFlagBits::eCompute;
     raycastShaderInfo.module = raycastModule;
     raycastShaderInfo.pName = "main";
-
+    constants.raycast.window_height=600;
+    constants.raycast.window_width=800;
+    constants.raycast.octreeDepth=3;
     vk::SpecializationInfo raycastSpecializationInfo;
     std::vector<vk::SpecializationMapEntry> raycastSpecializationEntries;
     raycastSpecializationEntries.push_back(vk::SpecializationMapEntry{0, offsetof(RaycastSpecialization, window_width), sizeof(uint32_t)});
     raycastSpecializationEntries.push_back(vk::SpecializationMapEntry{1, offsetof(RaycastSpecialization, window_height), sizeof(uint32_t)});
+    raycastSpecializationEntries.push_back(vk::SpecializationMapEntry{2, offsetof(RaycastSpecialization, octreeDepth), sizeof(uint32_t)});
+    
     raycastSpecializationInfo.dataSize = sizeof(constants.raycast);
     raycastSpecializationInfo.mapEntryCount = static_cast<uint32_t>(raycastSpecializationEntries.size());
     raycastSpecializationInfo.pMapEntries = raycastSpecializationEntries.data();
@@ -553,7 +557,7 @@ void VulkanInstance::createSwapchainObjects()
     if (pipelineResult.result != vk::Result::eSuccess)
         throw EXCEPTION("Failed to create compute pipeline", pipelineResult.result);
     raycastPipeline_ = pipelineResult.value;
-    device_.destroyShaderModule(raycastModule);
+    // device_.destroyShaderModule(raycastModule);
     vk::ShaderModule lightingModule = utils_createShaderModule("shaders/lighting.spv");
     ;
     vk::PipelineShaderStageCreateInfo lightingShaderInfo{};
@@ -586,7 +590,7 @@ void VulkanInstance::createSwapchainObjects()
     if (pipelineResult.result != vk::Result::eSuccess)
         throw EXCEPTION("Failed to create compute pipeline", pipelineResult.result);
     lightingPipeline_ = pipelineResult.value;
-    device_.destroyShaderModule(lightingModule);
+    // device_.destroyShaderModule(lightingModule);
     vk::ShaderModule renderModule = utils_createShaderModule("shaders/render.spv");
     ;
     vk::PipelineShaderStageCreateInfo renderShaderInfo{};
@@ -622,7 +626,7 @@ void VulkanInstance::createSwapchainObjects()
     renderPipeline_ = pipelineResult.value;
     LOGGING->info() << "Created pipelines" << std::endl;
     commandBuffers_.resize(images_.size() * 2);
-    device_.destroyShaderModule(renderModule);
+    // device_.destroyShaderModule(renderModule);
     vk::CommandBufferAllocateInfo commandBufferAllocateInfo{};
     commandBufferAllocateInfo.commandPool = commandPool_;
     commandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
