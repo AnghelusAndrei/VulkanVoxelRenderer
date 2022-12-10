@@ -12,6 +12,7 @@ VoxelEngine::VoxelEngine(Config config) : config_(config)
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebuffer_resized);
     glfwSetWindowMaximizeCallback(window, window_maximized);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     instance_ = new VulkanInstance(this);
 }
 
@@ -60,6 +61,12 @@ void VoxelEngine::window_maximized(GLFWwindow *window_, int maximized)
     auto engine = reinterpret_cast<VoxelEngine *>(glfwGetWindowUserPointer(window_));
     engine->config_.window_height = height;
     engine->config_.window_width = width;
+
+    if(maximized) {
+        glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    }else {
+        glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    }
 }
 
 VoxelEngine::~VoxelEngine()

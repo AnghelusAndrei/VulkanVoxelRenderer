@@ -48,11 +48,11 @@
  */
 struct CameraUBO
 {
-    glm::vec3 position;
-    glm::vec3 direction;
-    glm::vec3 cameraPlanVector;
-    glm::vec3 cameraPlanSurfaceRightVector;
-    glm::vec3 cameraPlanSurfaceUpVector;
+    glm::vec4 position;
+    glm::vec4 direction;
+    glm::vec4 cameraPlanVector;
+    glm::vec4 cameraPlanSurfaceRightVector;
+    glm::vec4 cameraPlanSurfaceUpVector;
 };
 struct UBO
 {

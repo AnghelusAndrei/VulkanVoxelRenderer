@@ -49,33 +49,36 @@ void Camera::input(){
 
         rotation = glm::vec2(0,0);
     }else{
-        rotation.x = (rotation.x + (mouse.x - start_angle.x) * 0.6);
-        rotation.y = (rotation.y - (mouse.y - start_angle.y) * 0.6);
+        rotation.x = (rotation.x - (mouse.x - start_angle.x) * 0.1);
+        rotation.y = (rotation.y - (mouse.y - start_angle.y) * 0.1);
 
         direction.x = cosf(glm::radians(rotation.x))*cosf(glm::radians(rotation.y));
         direction.y = sinf(glm::radians(rotation.y));
         direction.z = sinf(glm::radians(rotation.x))*cosf(glm::radians(rotation.y));
 
-        direction = glm::normalize(direction);
-
         start_angle = glm::vec2((float)mouse.x,(float)mouse.y);
     }
 
-    LOGGING->print(VERBOSE) << direction.x << ' ' << direction.y << ' ' << direction.z << '\n';
+    //LOGGING->print(VERBOSE) << direction.x << ' ' << direction.y << ' ' << direction.z << '\n';
 
 }
 
 CameraUBO Camera::getUBO(){
     std::lock_guard<std::mutex> lock(uboMutex_);
     CameraUBO cameraData;
-    cameraData.position = position;
+    cameraData.position = glm::vec4(position,0);
     //int width,height;
     //glfwGetWindowSize(window_, &width, &height);
     float aspectRatio = 600.0f/800.0f;
-    cameraData.direction = direction;
-    cameraData.cameraPlanVector = direction;
-    cameraData.cameraPlanSurfaceRightVector = glm::normalize(glm::cross(glm::vec3(0,1,0), direction)) * tanf(glm::radians(90.0f/2));
-    cameraData.cameraPlanSurfaceUpVector = glm::normalize(glm::cross(cameraData.cameraPlanSurfaceRightVector, direction)) * aspectRatio * tanf(glm::radians(90.0f/2));
-    //LOGGING->print(VERBOSE) << cameraData.cameraPlanSurfaceUpVector.x << ' ' << cameraData.cameraPlanSurfaceUpVector.y << ' ' << cameraData.cameraPlanSurfaceUpVector.z << '\n';
+    cameraData.direction = glm::vec4(direction,0);
+    cameraData.cameraPlanVector = glm::vec4(direction,0);
+    cameraData.cameraPlanSurfaceRightVector =glm::vec4(glm::normalize(glm::cross(glm::vec3(0, 1, 0), direction)),0);
+    cameraData.cameraPlanSurfaceUpVector = glm::vec4(glm::normalize(glm::cross(glm::vec3(cameraData.cameraPlanSurfaceRightVector.x, cameraData.cameraPlanSurfaceRightVector.y, cameraData.cameraPlanSurfaceRightVector.z), direction)),0);
+    LOGGING->print(VERBOSE) << "POS: "<< '[' << cameraData.position.x << ',' << cameraData.position.y << ',' << cameraData.position.z << "]\n";
+    
+    LOGGING->print(VERBOSE) << "DIR: "<< '[' << cameraData.direction.x << ',' << cameraData.direction.y << ',' << cameraData.direction.z << "]\n";
+    LOGGING->print(VERBOSE) << "UP: "<< '[' << cameraData.cameraPlanSurfaceUpVector.x << ',' << cameraData.cameraPlanSurfaceUpVector.y << ',' << cameraData.cameraPlanSurfaceUpVector.z << "]\n";
+    LOGGING->print(VERBOSE) << "RIGHT: "<< '[' << cameraData.cameraPlanSurfaceRightVector.x << ',' << cameraData.cameraPlanSurfaceRightVector.y << ',' << cameraData.cameraPlanSurfaceRightVector.z << "]\n";
+    
     return cameraData;
 }
