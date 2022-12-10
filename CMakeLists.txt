@@ -54,9 +54,16 @@ foreach(shader ${SHADERS})
 
 endforeach()
 
+set(Boost_USE_STATIC_LIBS OFF) 
+set(Boost_USE_MULTITHREADED ON)  
+set(Boost_USE_STATIC_RUNTIME OFF) 
+find_package(Boost 1.45.0 COMPONENTS json) 
 
+if(NOT Boost_FOUND)
+    message(SEND_ERROR "Boost not found")
+endif()
 target_include_directories(${PROJECT_NAME} PUBLIC lib/glfw/include)
 target_include_directories(${PROJECT_NAME} PUBLIC lib/glm)
 target_include_directories(${PROJECT_NAME} PUBLIC lib/VulkanMemoryAllocator/include)
-target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan glfw glm VulkanMemoryAllocator)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${Boost_LIBRARIES} Vulkan::Vulkan glfw glm VulkanMemoryAllocator)
 add_dependencies(${PROJECT_NAME} Shaders)

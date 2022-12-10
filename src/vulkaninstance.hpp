@@ -1,6 +1,6 @@
 #pragma once
 
-
+#include <atomic>
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
@@ -34,38 +34,60 @@
 #include "octree.hpp"
 #include "camera.hpp"
 #include "stats.hpp"
-//#include "object.hpp"
-#include "materials.hpp"
-#include "lights.hpp"
-//#include "objectCollection.hpp"
-#include "utils.hpp"
+// #include "object.hpp"
+// #include "materials.hpp"
+// #include "lights.hpp"
+// #include "objectCollection.hpp"
+// #include "utils.hpp"
 
 #define MULTITHREADED
 
 /**
  * @brief Represents all rendering infrastructure
- * 
+ *
  */
+struct CameraUBO
+{
+    glm::vec3 position;
+    glm::vec3 direction;
+    glm::vec3 cameraPlanVector;
+    glm::vec3 cameraPlanSurfaceRightVector;
+    glm::vec3 cameraPlanSurfaceUpVector;
+};
+struct UBO
+{
+    CameraUBO camera;
+};
 class VoxelEngine;
-class VulkanInstance {
+class Octree;
+class Camera;
+class VulkanInstance
+{
 public:
     VulkanInstance(VoxelEngine *engine);
+    void run();
     void render();
+    void setCamera(Camera *camera) { camera_ = camera; }
     ~VulkanInstance();
     void update();
-private:
 
-    struct VmaBuffer {
+    struct VmaBuffer
+    {
         vk::Buffer buffer;
         VmaAllocation allocation;
+        VmaAllocationInfo allocationInfo;
     };
+    VmaBuffer stagingBuffer_;
 
-    struct QueueSupportDetails {
+private:
+    Camera *camera_;
+    struct QueueSupportDetails
+    {
         std::optional<uint32_t> computeFamily;
         std::optional<uint32_t> presentFamily;
         bool hasValues()
         {
-            return computeFamily.has_value() && presentFamily.has_value();   
+            return computeFamily.has_value() && presentFamily.has_value();
         }
     };
     struct SwapChainSupportDetails
@@ -76,26 +98,25 @@ private:
         vk::Extent2D extent;
     };
 
-    struct RaycastSpecialization 
+    struct RaycastSpecialization
     {
-        uint32_t window_width, window_height;
-    };
-    
-    struct LightingSpecialization 
-    {
-        
+        uint32_t window_width, window_height, octreeDepth;
     };
 
-    struct RenderSpecialization 
+    struct LightingSpecialization
     {
-        
     };
-    struct SpecializationConstants 
+
+    struct RenderSpecialization
+    {
+    };
+    struct SpecializationConstants
     {
         RaycastSpecialization raycast;
         LightingSpecialization lighting;
         RenderSpecialization render;
     };
+
     VoxelEngine *engine_;
     vk::Instance instance_;
     vk::DispatchLoaderDynamic dispatch_;
@@ -105,10 +126,11 @@ private:
     vk::Device device_;
     vk::Queue presentQueue_, computeQueue_;
     VmaAllocator allocator_;
-    VmaBuffer stagingBuffer_, octreeBuffer_, lightingBuffer_;
-    
-    size_t currentFrame_=0;
-
+    std::mutex uploadMutex_;
+    bool upload_;
+    VmaBuffer octreeBuffer_, lightingBuffer_;
+    std::vector<VmaBuffer> uniformBuffers_;
+    size_t currentFrame_ = 0;
     vk::CommandPool commandPool_;
     vk::DescriptorPool raycastPool_, lightingPool_, renderPool_;
     vk::SwapchainKHR swapChain_;
@@ -116,20 +138,19 @@ private:
     std::vector<vk::ImageView> imageViews_;
     vk::Sampler imageSampler_;
     vk::DescriptorSetLayout raycastSetLayout_, lightingSetLayout_, renderSetLayout_;
-    std::vector<vk::DescriptorSet> raycastDescriptorSets_, lightingDescriptorSets_, renderDescriptorSets_;  
+    std::vector<vk::DescriptorSet> raycastDescriptorSets_, lightingDescriptorSets_, renderDescriptorSets_;
     vk::PipelineLayout raycastPipelineLayout_, lightingPipelineLayout_, renderPipelineLayout_;
     vk::Pipeline raycastPipeline_, lightingPipeline_, renderPipeline_;
-    std::vector<vk::CommandBuffer> commandBuffers_; 
+    std::vector<vk::CommandBuffer> commandBuffers_;
     std::vector<std::vector<vk::DescriptorSet>> jointDescriptorSets_;
     std::vector<vk::Semaphore> imageAvailableSemaphores_, renderFinishedSemaphores_;
     std::vector<vk::Fence> inFlightFences_, imagesInFlightFences_;
-    
+
     void createInstance();
-    void selectPhysicalDevice(); 
+    void selectPhysicalDevice();
     void createPermanentObjects();
     void createSwapchainObjects();
     void setupFrameObjects();
-
 
     QueueSupportDetails utils_getQueueSupportDetails();
     vk::DescriptorPool utils_createDescriptorPool(std::vector<vk::DescriptorType> descriptorTypes);
@@ -141,8 +162,9 @@ private:
     void utils_destroyBuffer(VmaBuffer buffer);
     const std::vector<const char *> utils_validationLayers = {
         "VK_LAYER_KHRONOS_validation"};
-    const std::vector<const char*> utils_deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    };
+    const std::vector<const char *> utils_deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+
     friend class VoxelEngine;
-};  
+    friend class Octree;
+};

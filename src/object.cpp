@@ -1,6 +1,6 @@
 #include "object.hpp"
 
-Object::Object(Octree *octree, glm::uvec3 position_, glm::uvec2 rotation_, glm::vec3 scale_) : octree_p(octree), position(position_), rotation(rotation_), scale(scale_), Utils(new utils){
+/*Object::Object(Octree *octree, glm::uvec3 position_, glm::uvec2 rotation_, glm::vec3 scale_) : octree_p(octree), position(position_), rotation(rotation_), scale(scale_), Utils(new utils){
 }
 
 Object::~Object(){
@@ -306,4 +306,4 @@ glm::uvec3 Object::SetCurrent(glm::vec3 raw){
         rawVoxel.x = (raw.z + BoundingBox_p.MIN.z)*scale.z;
 
         rawVoxel += oldPosition_p;
-}
+}*/
