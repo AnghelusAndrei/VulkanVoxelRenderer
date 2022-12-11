@@ -13,6 +13,9 @@ class Camera{
         CameraUBO getUBO();
          
     public:
+        float FixX(float ang);
+        float FixY(float ang);
+
         glm::vec3 position = glm::vec3(0,0,0);
         glm::vec3 direction = glm::vec3(1,0,0);
 

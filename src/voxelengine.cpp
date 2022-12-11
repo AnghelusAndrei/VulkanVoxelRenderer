@@ -35,7 +35,8 @@ void VoxelEngine::run()
     glm::u8vec3 rgb = glm::u8vec3(255, 255, 255);
     node.leaf.data=Octree::utils_rgb(rgb.r, rgb.g, rgb.b);
 
-    octree->insert({2,0,0}, node);
+    octree->insert(glm::uvec3(0,0,0), node);
+    octree->insert(glm::uvec3(1,1,1), node);
     
     octree->upload(instance_);
     
