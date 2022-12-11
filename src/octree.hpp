@@ -14,24 +14,19 @@ class VulkanInstance;
 class Octree
 {
 public:
-    struct __attribute__((packed)) Node
-    {
-        unsigned isNode : 1;
-        union __attribute__((packed))
-        {
-            struct __attribute__((packed)) 
-            {
-                unsigned count: 3;
-                unsigned next : 28;
-            } node;
-            struct __attribute__((packed)) 
-            {
-                unsigned type : 7;
-                unsigned data: 24;
-            } leaf;
-        };
+
+    struct Node {
+        unsigned isNode:1;
+        unsigned count: 3;
+        unsigned next : 28;
     };
 
+    struct Leaf {
+        unsigned isNode:1;
+        unsigned type:7;
+        unsigned data:24;
+    };
+    
     enum TYPES{
         EMPTY = 0,
         DEFAULT = 1
@@ -43,12 +38,12 @@ public:
     void upload(VulkanInstance *instance);
 
     uint32_t lookup(glm::uvec3 position);
-    void insert(glm::uvec3 position, Node data);
-    void insert(glm::uvec3 position, Node data, std::function<bool(uint8_t)> func);
-    void remove(glm::uvec3 position);
-    void remove(glm::uvec3 position, std::function<bool(uint8_t)> func);
-    void move(glm::uvec3 position1, glm::uvec3 position2);
-    void move(glm::uvec3 position1, glm::uvec3 position2, std::function<int(uint8_t, uint8_t)> func); // func = 0 -> canceled, func = 1 -> delete v1, func = 2 -> success
+    void insert(glm::uvec3 position, Leaf data);
+    //void insert(glm::uvec3 position, Leaf data, std::function<bool(uint8_t)> func);
+    //void remove(glm::uvec3 position);
+    //void remove(glm::uvec3 position, std::function<bool(uint8_t)> func);
+    //void move(glm::uvec3 position1, glm::uvec3 position2);
+    //void move(glm::uvec3 position1, glm::uvec3 position2, std::function<int(uint8_t, uint8_t)> func); // func = 0 -> canceled, func = 1 -> delete v1, func = 2 -> success
 
     static uint32_t utils_rgb(uint8_t r, uint8_t g ,uint8_t b) { return ((r << 16) | (g<<8) | b);}
 private:

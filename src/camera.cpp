@@ -97,9 +97,9 @@ CameraUBO Camera::getUBO(){
     std::lock_guard<std::mutex> lock(uboMutex_);
     CameraUBO cameraData;
     cameraData.position = glm::vec4(position,0);
-    //int width,height;
-    //glfwGetWindowSize(window_, &width, &height);
-    float aspectRatio = 600.0f/800.0f;
+    int width,height;
+    glfwGetWindowSize(window_, &width, &height);
+    float aspectRatio = (float)(height)/(float)(width);
     cameraData.direction = glm::vec4(direction,0);
     cameraData.cameraPlanVector = glm::vec4(direction,0);
     cameraData.cameraPlanSurfaceRightVector =glm::vec4(glm::normalize(glm::cross(glm::vec3(0, 1, 0), direction)) * tanf(glm::radians((float)90.0f/2)),0);

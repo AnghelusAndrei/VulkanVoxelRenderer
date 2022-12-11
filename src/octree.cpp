@@ -4,6 +4,7 @@
 
 Octree::Octree(uint32_t depth) : depth_(depth)
 {
+    assert(sizeof(Node)==4);
     uint32_t p2r = 1;
     for (int i = depth_; i >= 1; i--)
     {
@@ -26,17 +27,15 @@ void Octree::upload(VulkanInstance *instance)
 {
     instance->uploadMutex_.lock();
     instance->upload_ = true;
-#ifdef DEBUG
-    /*for(int i=0;i<100;i++)
+    for(int i=0;i<100;i++)
     {
         if(!nodes_[i].isNode)
         {
-            LOGGING->print(VERBOSE) << std::hex << nodes_[i].leaf.data << ' ';
+            LOGGING->print(VERBOSE) << std::hex << ((Leaf*)&nodes_[i])->data << ' ';
 
-        }else LOGGING->print(VERBOSE) << std::dec<< nodes_[i].node.next << ' ';
+        }else LOGGING->print(VERBOSE) << std::dec<< nodes_[i].next << ' ';
         if((i-1)%8==0&&i>1) LOGGING->print(VERBOSE) << '\n';
-    }*/
-#endif
+    }
     memcpy(instance->stagingBuffer_.allocationInfo.pMappedData, nodes_, capacity_);
     instance->uploadMutex_.unlock();
 }
@@ -54,13 +53,13 @@ uint32_t Octree::lookup(glm::uvec3 position)
     for (int depth = 1; depth <= depth_; depth++)
     {
         offset += utils_locate(position, depth);
-        Node leaf = nodes_[offset];
-        if (!leaf.isNode)
+        Node node = nodes_[offset];
+        if (!node.isNode)
             return offset;
-        offset = leaf.node.next;
+        offset = node.next;
     }
 }
-void Octree::insert(glm::uvec3 position, Node data)
+void Octree::insert(glm::uvec3 position, Leaf data)
 {
     uint32_t offset = 0;
     uint32_t lastNode = 0;
@@ -68,8 +67,9 @@ void Octree::insert(glm::uvec3 position, Node data)
     for (int depth = 1; depth < depth_; depth++)
     {
         offset += utils_locate(position, depth);
-        Node leaf = nodes_[offset];
-        if(!leaf.isNode){
+        Node node = nodes_[offset];
+        if(!node.isNode){
+            Leaf leaf = *reinterpret_cast<Leaf*>(&node);
             uint32_t nextOffset;
             if(freeNodes.empty()){
                 newNode+=8;
@@ -80,22 +80,23 @@ void Octree::insert(glm::uvec3 position, Node data)
             }
             Node node;
             node.isNode = 1;
-            node.node.next = nextOffset;
-            node.node.count = 0;
+            node.next = nextOffset;
+            node.count = 0;
             nodes_[offset] = node;
-            if(depth>1)nodes_[lastNode].node.count++;
+            if(depth>1)nodes_[lastNode].count++;
             lastNode = offset;
             offset = nextOffset;
         }else{
-            offset = leaf.node.next;
+            offset = node.next;
         }
     }
 
     int i = offset + utils_locate(position, depth_);
-    if(nodes_[i].leaf.type == 0)nodes_[lastNode].node.count++;
-    nodes_[i] = data;
+    if((reinterpret_cast<Leaf*>(&nodes_[i]))->type == 0)nodes_[lastNode].count++;
+    nodes_[i] = *reinterpret_cast<Node*>(&data);
 }
-void Octree::insert(glm::uvec3 position, Node data, std::function<bool(uint8_t)> func)
+/*
+void Octree::insert(glm::uvec3 position, Leaf data, std::function<bool(uint8_t)> func)
 {
     uint32_t offset = 0;
     uint32_t lastNode = 0;
@@ -115,14 +116,14 @@ void Octree::insert(glm::uvec3 position, Node data, std::function<bool(uint8_t)>
             }
             Node node;
             node.isNode = 1;
-            node.node.next = nextOffset;
-            node.node.count = 0;
+            node.next = nextOffset;
+            node.count = 0;
             nodes_[offset] = node;
-            if(depth>1)nodes_[lastNode].node.count++;
+            if(depth>1)nodes_[lastNode].count++;
             lastNode = offset;
             offset = nextOffset;
         }else{
-            offset = leaf.node.next;
+            offset = leaf.next;
         }
     }
 
@@ -375,3 +376,4 @@ void Octree::move(glm::uvec3 position1, glm::uvec3 position2, std::function<int(
         break;
     }
 }
+*/
