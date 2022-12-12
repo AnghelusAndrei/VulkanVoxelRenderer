@@ -122,15 +122,12 @@ vec3 box(ray_t ray){
     while(!inBounds(r_pos, octreeLength)){
         if(q>6)return vec3(-1,-1,-1);
 
-        z = vec3(1e9,1e9,1e9);
-        y = vec3(1e9,1e9,1e9);
-        x = vec3(1e9,1e9,1e9);
         float xD,yD,zD;
         float d = 1e9;
 
-        z.z = (ray.direction.z < 0) ? (octreeLength-f_error-r_pos.z) : (f_error-r_pos.z);
-        y.y = (ray.direction.y < 0) ? (octreeLength-f_error-r_pos.y) : (f_error-r_pos.y);
-        x.x = (ray.direction.x < 0) ? (octreeLength-f_error-r_pos.x) : (f_error-r_pos.x);
+        z.z = (ray.direction.z < 0) ? ((r_pos.z > octreeLength) ? (octreeLength-f_error-r_pos.z) : 1e9) : ((r_pos.z < 0) ? (f_error-r_pos.z) : 1e9);
+        y.y = (ray.direction.y < 0) ? ((r_pos.y > octreeLength) ? (octreeLength-f_error-r_pos.y) : 1e9) : ((r_pos.y < 0) ? (f_error-r_pos.y) : 1e9);
+        x.x = (ray.direction.x < 0) ? ((r_pos.x > octreeLength) ? (octreeLength-f_error-r_pos.x) : 1e9) : ((r_pos.x < 0) ? (f_error-r_pos.x) : 1e9);
 
         z.x = (z.z*ray.direction.x)/ray.direction.z;
         z.y = (z.z*ray.direction.y)/ray.direction.z;
@@ -144,9 +141,12 @@ vec3 box(ray_t ray){
         zD = distance(vec3(0,0,0),z);
         yD = distance(vec3(0,0,0),y);
         xD = distance(vec3(0,0,0),x);
-        if(zD < d){d=yD;v_add=y;}
+        
+        if(zD < d){d=zD;v_add=z;}
         if(yD < d){d=yD;v_add=y;}
         if(xD < d){d=xD;v_add=x;}
+
+        if(d>1e8)return vec3(-1,-1,-1);
 
         
         r_pos += v_add;
@@ -166,6 +166,7 @@ voxel_t Raycast(ray_t ray){
     uint depth = 1;
     vec3 l_pos = vec3(0,0,0);
     vec3 r_pos = box(ray);
+    leaf_t target;
     //bool inBox = false;
 
     vec3 normal = vec3(0,0,0);
@@ -174,43 +175,6 @@ voxel_t Raycast(ray_t ray){
     uint q = 0;
 
     if(inBounds(r_pos, octreeLength)){
-        for (depth; depth <= octreeDepth; depth++)
-        {
-            offset += utils_locate(uvec3(r_pos), depth);
-
-            Node leaf = readNode(octree.data[offset]);
-            if(!leaf.isNode){
-                if(leaf.l_type == 1){
-                    voxel.id = offset;
-                    voxel.hit = true;
-                    return voxel;
-                }
-                break;
-            }
-            nodeStack[depth] = leaf.n_next;
-            offset = leaf.n_next;
-        }
-    }
-
-    while(inBounds(r_pos, octreeLength)){
-        float d = 1e9;
-        float xD,yD,zD;
-        //inBox = false;
-
-        x = vec3(0,0,0);
-        y = vec3(0,0,0);
-        z = vec3(0,0,0);
-
-        //lookup
-        leaf_t target;
-
-        while(!utils_contained(uvec3(l_pos), uvec3(r_pos), depth)){
-            depth--;
-        }
-
-        offset = nodeStack[depth];
-        depth++;
-
         for (depth; depth <= octreeDepth; depth++)
         {
             offset += utils_locate(uvec3(r_pos), depth);
@@ -231,10 +195,21 @@ voxel_t Raycast(ray_t ray){
             nodeStack[depth] = leaf.n_next;
             offset = leaf.n_next;
         }
+    }
+
+    while(inBounds(r_pos, octreeLength)){
+        float d = 1e9;
+        float xD,yD,zD;
+        //inBox = false;
+
+        x = vec3(0,0,0);
+        y = vec3(0,0,0);
+        z = vec3(0,0,0);
+
+        //lookup
+
 
         /*uvec2 lookup_results = lookup(uvec3(r_pos));
-
-        leaf_t target;
 
         target.position.x = uint(r_pos.x) - uint(r_pos.x)%lookup_results.y;
         target.position.y = uint(r_pos.y) - uint(r_pos.y)%lookup_results.y;
@@ -292,6 +267,34 @@ voxel_t Raycast(ray_t ray){
         l_pos = r_pos;
         r_pos += v_add;
         q++;
+
+        while(!utils_contained(uvec3(l_pos), uvec3(r_pos), depth)){
+            depth--;
+        }
+
+        offset = nodeStack[depth];
+        depth++;
+
+        for (depth; depth <= octreeDepth; depth++)
+        {
+            offset += utils_locate(uvec3(r_pos), depth);
+
+            Node leaf = readNode(octree.data[offset]);
+            if(!leaf.isNode){
+                if(leaf.l_type == 1){
+                    voxel.id = offset;
+                    voxel.hit = true;
+                    return voxel;
+                }
+                target.size = 1<<(octreeDepth-depth);
+                target.position.x = uint(r_pos.x) - uint(r_pos.x)%target.size;
+                target.position.y = uint(r_pos.y) - uint(r_pos.y)%target.size;
+                target.position.z = uint(r_pos.z) - uint(r_pos.z)%target.size;
+                break;
+            }
+            nodeStack[depth] = leaf.n_next;
+            offset = leaf.n_next;
+        }
     }
     //if(inBox){imageStore(OutputImage, ivec2(gl_GlobalInvocationID.xy), vec4(0,0,1,1));}
     //imageStore(OutputImage, ivec2(gl_GlobalInvocationID.xy), vec4(0,1,0,1));

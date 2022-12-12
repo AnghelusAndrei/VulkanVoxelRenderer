@@ -2,6 +2,7 @@
 
 #include <GLFW/glfw3.h>
 #include "config.hpp"
+#include <stdlib.h>
 
 #include "vulkaninstance.hpp"
 

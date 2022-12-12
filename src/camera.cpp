@@ -48,22 +48,22 @@ void Camera::input(){
     glm::vec2 dir2d = glm::normalize(glm::vec2(direction.x,direction.z));
     glm::vec3 dir3d = glm::vec3(dir2d.x,0,dir2d.y);
     if(glfwGetKey(window_, SETTINGS->get<int64_t>("up",GLFW_KEY_SPACE)) == GLFW_PRESS)//up movement
-        position += (float)(deltaTime*speed) * up;
+        position -= (float)(deltaTime*speed) * up;
     
     if(glfwGetKey(window_, SETTINGS->get<int64_t>("down",GLFW_KEY_LEFT_SHIFT)) == GLFW_PRESS)//down movement
-        position -= (float)(deltaTime*speed) * up;
+        position += (float)(deltaTime*speed) * up;
 
     if(glfwGetKey(window_, SETTINGS->get<int64_t>("forward",GLFW_KEY_W)) == GLFW_PRESS)//forward movement
-        position -= (float)(deltaTime*speed) * dir3d;
-
-    if(glfwGetKey(window_, SETTINGS->get<int64_t>("backward", GLFW_KEY_S)) == GLFW_PRESS)//backward movement
         position += (float)(deltaTime*speed) * dir3d;
 
+    if(glfwGetKey(window_, SETTINGS->get<int64_t>("backward", GLFW_KEY_S)) == GLFW_PRESS)//backward movement
+        position -= (float)(deltaTime*speed) * dir3d;
+
     if(glfwGetKey(window_, SETTINGS->get<int64_t>("left",GLFW_KEY_A)) == GLFW_PRESS)//left movement
-        position += (float)(deltaTime*speed) * glm::normalize(glm::cross(up, dir3d));
+        position += (float)(deltaTime*speed) * glm::normalize(glm::cross(dir3d, up));
 
     if(glfwGetKey(window_, SETTINGS->get<int64_t>("right",GLFW_KEY_D)) == GLFW_PRESS)//right movement
-        position += (float)(deltaTime*speed) * glm::normalize(glm::cross(dir3d, up));
+        position += (float)(deltaTime*speed) * glm::normalize(glm::cross(up, dir3d));
 
     static glm::dvec2 mouse;
 
@@ -105,8 +105,8 @@ CameraUBO Camera::getUBO(){
     cameraData.cameraPlanSurfaceRightVector =glm::vec4(glm::normalize(glm::cross(glm::vec3(0, 1, 0), direction)) * tanf(glm::radians((float)90.0f/2)),0);
     cameraData.cameraPlanSurfaceUpVector = glm::vec4(glm::normalize(glm::cross(glm::vec3(cameraData.cameraPlanSurfaceRightVector.x, cameraData.cameraPlanSurfaceRightVector.y, cameraData.cameraPlanSurfaceRightVector.z), direction)) * tanf(glm::radians((float)90.0f/2)) * aspectRatio,0);
     
-    LOGGING->print(VERBOSE) << "POS: "<< '[' << cameraData.position.x << ',' << cameraData.position.y << ',' << cameraData.position.z << "]\n";
-    LOGGING->print(VERBOSE) << "DIR: "<< '[' << cameraData.direction.x << ',' << cameraData.direction.y << ',' << cameraData.direction.z << "]\n";
+    //LOGGING->print(VERBOSE) << "POS: "<< '[' << cameraData.position.x << ',' << cameraData.position.y << ',' << cameraData.position.z << "]\n";
+    //LOGGING->print(VERBOSE) << "DIR: "<< '[' << cameraData.direction.x << ',' << cameraData.direction.y << ',' << cameraData.direction.z << "]\n";
     //LOGGING->print(VERBOSE) << "UP: "<< '[' << cameraData.cameraPlanSurfaceUpVector.x << ',' << cameraData.cameraPlanSurfaceUpVector.y << ',' << cameraData.cameraPlanSurfaceUpVector.z << "]\n";
     //LOGGING->print(VERBOSE) << "RIGHT: "<< '[' << cameraData.cameraPlanSurfaceRightVector.x << ',' << cameraData.cameraPlanSurfaceRightVector.y << ',' << cameraData.cameraPlanSurfaceRightVector.z << "]\n";
     
