@@ -105,8 +105,8 @@ CameraUBO Camera::getUBO(){
     cameraData.cameraPlanSurfaceRightVector =glm::vec4(glm::normalize(glm::cross(glm::vec3(0, 1, 0), direction)) * tanf(glm::radians((float)90.0f/2)),0);
     cameraData.cameraPlanSurfaceUpVector = glm::vec4(glm::normalize(glm::cross(glm::vec3(cameraData.cameraPlanSurfaceRightVector.x, cameraData.cameraPlanSurfaceRightVector.y, cameraData.cameraPlanSurfaceRightVector.z), direction)) * tanf(glm::radians((float)90.0f/2)) * aspectRatio,0);
     
-    //LOGGING->print(VERBOSE) << "POS: "<< '[' << cameraData.position.x << ',' << cameraData.position.y << ',' << cameraData.position.z << "]\n";
-    //LOGGING->print(VERBOSE) << "DIR: "<< '[' << cameraData.direction.x << ',' << cameraData.direction.y << ',' << cameraData.direction.z << "]\n";
+    LOGGING->print(VERBOSE) << "POS: "<< '[' << cameraData.position.x << ',' << cameraData.position.y << ',' << cameraData.position.z << "]\n";
+    LOGGING->print(VERBOSE) << "DIR: "<< '[' << cameraData.direction.x << ',' << cameraData.direction.y << ',' << cameraData.direction.z << "]\n";
     //LOGGING->print(VERBOSE) << "UP: "<< '[' << cameraData.cameraPlanSurfaceUpVector.x << ',' << cameraData.cameraPlanSurfaceUpVector.y << ',' << cameraData.cameraPlanSurfaceUpVector.z << "]\n";
     //LOGGING->print(VERBOSE) << "RIGHT: "<< '[' << cameraData.cameraPlanSurfaceRightVector.x << ',' << cameraData.cameraPlanSurfaceRightVector.y << ',' << cameraData.cameraPlanSurfaceRightVector.z << "]\n";
     

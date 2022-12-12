@@ -29,18 +29,23 @@ void VoxelEngine::run()
     Camera *camera = new Camera(window, initialPosition, initialDirection);
     instance_->setCamera(camera);
     std::thread renderThread(&VulkanInstance::run, instance_);
-    Octree::Leaf node1,node2;
+    Octree::Leaf node1,node2,node3;
     node1.isNode=false;
     node1.type = Octree::DEFAULT;
     node2.isNode=false;
     node2.type = Octree::DEFAULT;
+    node3.isNode=false;
+    node3.type = Octree::DEFAULT;
     glm::u8vec3 rgb = glm::u8vec3(255, 255, 255);
     node1.data=Octree::utils_rgb(rgb.r, rgb.g, rgb.b);
     rgb = glm::u8vec3(255, 94, 5);
     node2.data=Octree::utils_rgb(rgb.r, rgb.g, rgb.b);
+    rgb = glm::u8vec3(100, 255, 5);
+    node3.data=Octree::utils_rgb(rgb.r, rgb.g, rgb.b);
 
     octree->insert(glm::uvec3(0,0,0), node1); /// bitte stfu
     octree->insert(glm::uvec3(1,1,1), node2);
+    octree->insert(glm::uvec3(0,1,1), node3);
     
     octree->upload(instance_);
     

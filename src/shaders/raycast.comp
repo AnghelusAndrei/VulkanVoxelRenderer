@@ -26,7 +26,7 @@ layout(std140, set=0, binding=2) writeonly buffer LightingBuffer {
 layout(rgba8, set=0, binding=3) uniform writeonly image2D OutputImage;
 
 #define max_depth 15
-#define f_error 0.001
+#define f_error 0.0001
 
 
 uint octreeLength;
@@ -118,23 +118,19 @@ vec3 box(ray_t ray){
     vec3 v_add;
     int q = 0;
 
-    x = vec3(0,0,0);
-    y = vec3(0,0,0);
-    z = vec3(0,0,0);
-
     //intersect bounds
     while(!inBounds(r_pos, octreeLength)){
-        if(q>7)return vec3(-1,-1,-1);
+        if(q>6)return vec3(-1,-1,-1);
 
-        z = vec3(0,0,0);
-        y = vec3(0,0,0);
-        x = vec3(0,0,0);
-        float xD,yD;
-        float d;
+        z = vec3(1e9,1e9,1e9);
+        y = vec3(1e9,1e9,1e9);
+        x = vec3(1e9,1e9,1e9);
+        float xD,yD,zD;
+        float d = 1e9;
 
-        z.z = (ray.direction.z < 0) ? (-(r_pos.z-octreeLength+f_error)) : (-r_pos.z+f_error);
-        y.y = (ray.direction.y < 0) ? (-(r_pos.y-octreeLength+f_error)) : (-r_pos.y+f_error);
-        x.x = (ray.direction.x < 0) ? (-(r_pos.x-octreeLength+f_error)) : (-r_pos.x+f_error);
+        z.z = (ray.direction.z < 0) ? (octreeLength-f_error-r_pos.z) : (f_error-r_pos.z);
+        y.y = (ray.direction.y < 0) ? (octreeLength-f_error-r_pos.y) : (f_error-r_pos.y);
+        x.x = (ray.direction.x < 0) ? (octreeLength-f_error-r_pos.x) : (f_error-r_pos.x);
 
         z.x = (z.z*ray.direction.x)/ray.direction.z;
         z.y = (z.z*ray.direction.y)/ray.direction.z;
@@ -145,14 +141,14 @@ vec3 box(ray_t ray){
         x.y = (x.x*ray.direction.y)/ray.direction.x;
         x.z = (x.x*ray.direction.z)/ray.direction.x;
 
-        d = distance(vec3(0,0,0), z);
-        yD = distance(vec3(0,0,0), y);
-        xD = distance(vec3(0,0,0), x);
-
-        v_add=z;
+        zD = distance(vec3(0,0,0),z);
+        yD = distance(vec3(0,0,0),y);
+        xD = distance(vec3(0,0,0),x);
+        if(zD < d){d=yD;v_add=y;}
         if(yD < d){d=yD;v_add=y;}
         if(xD < d){d=xD;v_add=x;}
 
+        
         r_pos += v_add;
         q++;
     }
@@ -272,9 +268,9 @@ voxel_t Raycast(ray_t ray){
         z.y = (z.z*ray.direction.y)/ray.direction.z;
 
 
-        xD = sqrt(x.x*x.x + x.y*x.y + x.z*x.z);
-        yD = sqrt(y.x*y.x + y.y*y.y + y.z*y.z);
-        zD = sqrt(z.x*z.x + z.y*z.y + z.z*z.z);
+        zD = distance(vec3(0,0,0),z);
+        yD = distance(vec3(0,0,0),y);
+        xD = distance(vec3(0,0,0),x);
 
 
         if(xD < d){
@@ -321,25 +317,26 @@ void main()
     vec2 camera_plan_position = vec2(2 * (float(pixel_coords.x) / float(screenWidth)) - 1, 2 * (float(pixel_coords.y) / float(screenHeight)) - 1);
     vec3 vector_to_point = normalize(ubo.cameraPlanVector + camera_plan_position.x * ubo.cameraPlanSurfaceRightVector - camera_plan_position.y * ubo.cameraPlanSurfaceUpVector);
     
+    vec3 color = vec3(0,0,0);
 
     ray_t Ray;
     Ray.origin = ubo.position;
     Ray.direction = vector_to_point;
     Ray.max_dist = 5000;
     Ray.max_steps = 1000;
-    voxel_t voxel = Raycast(Ray);
 
-    //if(box(Ray).x < 0)imageStore(OutputImage, pixel_coords, vec4(1,0,0,1));
-    //else imageStore(OutputImage, pixel_coords, vec4(0,1,0,1));
+    if(box(Ray).x < 0)color += vec3(1,0,0);
+
+    voxel_t voxel = Raycast(Ray);
 
     if(voxel.hit){
         Node voxel = readNode(octree.data[voxel.id]);
-        imageStore(OutputImage, pixel_coords, vec4(voxel.l_data.x/255.0,voxel.l_data.y/255.0,voxel.l_data.z/255.0,1));
+        color += vec3(voxel.l_data.z/255.0,voxel.l_data.y/255.0,voxel.l_data.x/255.0);
     }
-    else imageStore(OutputImage, pixel_coords, vec4(0,0,0,1));
-    
 
-    //imageStore(OutputImage, pixel_coords, vec4(vector_to_point,1));
+    imageStore(OutputImage, pixel_coords, vec4(color,1));
+
+
 
     //imageStore(OutputImage, pixel_coords, packIndex(voxel.id));
 }
