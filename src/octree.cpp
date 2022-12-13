@@ -18,7 +18,6 @@ Octree::Octree(uint32_t depth) : depth_(depth)
         p8 *= 8;
     }
     LOGGING->info() << "Allocating nodes "<< capacity_ << '\n';
-    capacity_ = 65536;
     nodes_ =(Node*)calloc(capacity_, sizeof(Node));
     LOGGING->info() << "Allocated nodes" << '\n';
 }
@@ -27,16 +26,8 @@ void Octree::upload(VulkanInstance *instance)
 {
     instance->uploadMutex_.lock();
     instance->upload_ = true;
-    for(int i=0;i<100;i++)
-    {
-        if(!nodes_[i].isNode)
-        {
-            LOGGING->print(VERBOSE) << std::hex << ((Leaf*)&nodes_[i])->data << ' ';
 
-        }else LOGGING->print(VERBOSE) << std::dec<< nodes_[i].next << ' ';
-        if((i-1)%8==0&&i>1) LOGGING->print(VERBOSE) << '\n';
-    }
-    memcpy(instance->stagingBuffer_.allocationInfo.pMappedData, nodes_, capacity_);
+    memcpy(instance->stagingBuffer_.allocationInfo.pMappedData, nodes_, capacity_*sizeof(Node));
     instance->uploadMutex_.unlock();
 }
 uint32_t Octree::utils_locate(glm::uvec3 position, uint32_t depth)

@@ -1,15 +1,23 @@
 #version 460
 layout(local_size_x = 16, local_size_y = 16) in;
-layout(set=0, binding=0) uniform UniformBufferObject {
-    int test;
+layout(std140, set=0, binding=0) uniform UniformBufferObject {
+    vec3 position;
+    vec3 direction;
+    vec3 cameraPlanVector;
+    vec3 cameraPlanSurfaceRightVector;
+    vec3 cameraPlanSurfaceUpVector;
 } ubo;
 
-layout(std140, set=0, binding=1) readonly buffer OctreeBuffer {
+
+layout(std430, set=0, binding=1) readonly buffer OctreeBuffer {
     uint data[];
 } octree;
-layout(std140, set=0, binding=2) readonly buffer LightingBuffer {
-    uint data[];
+
+layout(std140, set=0, binding=2) buffer LightingBuffer {
+    vec4 data[];
 } lighting;
+ 
+layout(rgba8, set=0, binding=3) uniform writeonly image2D OutputImage;
 void main()
 {
     

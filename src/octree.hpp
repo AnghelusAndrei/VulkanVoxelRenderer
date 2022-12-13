@@ -46,8 +46,9 @@ public:
     //void move(glm::uvec3 position1, glm::uvec3 position2, std::function<int(uint8_t, uint8_t)> func); // func = 0 -> canceled, func = 1 -> delete v1, func = 2 -> success
 
     static uint32_t utils_rgb(uint8_t r, uint8_t g ,uint8_t b) { return ((r << 16) | (g<<8) | b);}
-private:
     size_t capacity_ = 0;
+private:
+    
     const uint32_t depth_;
     uint32_t newNode = 0;
     std::stack<uint32_t> freeNodes;

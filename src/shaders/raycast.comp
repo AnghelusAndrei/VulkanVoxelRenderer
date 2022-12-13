@@ -1,10 +1,20 @@
 #version 460
-layout(local_size_x = 16, local_size_y = 16) in;
+
+// Compute shader layout
+layout(local_size_x = 8, local_size_y = 8) in;
+
+
+// Constants
+const uint maxDepth = 15;
+
+// Specialization constants 
 
 layout(constant_id=0) const uint screenWidth = 800;
 layout(constant_id=1) const uint screenHeight = 600;
-layout(constant_id=2) const uint octreeDepth=3;
+layout(constant_id=2) const uint octreeDepth=7;
+
 const uvec2 screenSize=uvec2(screenWidth, screenHeight);
+
 
 layout(std140, set=0, binding=0) uniform UniformBufferObject {
     vec3 position;
@@ -70,7 +80,7 @@ Node readNode(uint data){
 }
 
 bool inBounds(vec3 v, float n) {return 0<=v.x&&v.x<=n &&0<=v.y&&v.y<=n&&0<=v.z&&v.z<n;}
-
+// 1 << (octreeDepth - depth)
 uint utils_locate(uvec3 position, uint depth){
     uint p2 = octreeLength>>depth;
     return (int(bool(position.x & p2)) << 2) | (int(bool(position.y & p2)) << 1) | (int(bool(position.z & p2)));
@@ -120,7 +130,7 @@ vec3 box(ray_t ray){
 
     //intersect bounds
     while(!inBounds(r_pos, octreeLength)){
-        if(q>6)return vec3(-1,-1,-1);
+        if(q>3)return vec3(-1,-1,-1);
 
         float xD,yD,zD;
         float d = 1e9;
@@ -161,9 +171,9 @@ voxel_t Raycast(ray_t ray){
     voxel.hit = false;
     voxel.id = 0;
 
-    uint nodeStack[max_depth];
-    uint offset = 0;
-    uint depth = 1;
+    //uint nodeStack[max_depth];
+    //uint offset = 0;
+    //uint depth = 1;
     vec3 l_pos = vec3(0,0,0);
     vec3 r_pos = box(ray);
     leaf_t target;
@@ -174,7 +184,7 @@ voxel_t Raycast(ray_t ray){
     vec3 x,y,z;
     uint q = 0;
 
-    if(inBounds(r_pos, octreeLength)){
+    /*if(inBounds(r_pos, octreeLength)){
         for (depth; depth <= octreeDepth; depth++)
         {
             offset += utils_locate(uvec3(r_pos), depth);
@@ -195,7 +205,7 @@ voxel_t Raycast(ray_t ray){
             nodeStack[depth] = leaf.n_next;
             offset = leaf.n_next;
         }
-    }
+    }*/
 
     while(inBounds(r_pos, octreeLength)){
         float d = 1e9;
@@ -209,7 +219,7 @@ voxel_t Raycast(ray_t ray){
         //lookup
 
 
-        /*uvec2 lookup_results = lookup(uvec3(r_pos));
+        uvec2 lookup_results = lookup(uvec3(r_pos));
 
         target.position.x = uint(r_pos.x) - uint(r_pos.x)%lookup_results.y;
         target.position.y = uint(r_pos.y) - uint(r_pos.y)%lookup_results.y;
@@ -224,7 +234,7 @@ voxel_t Raycast(ray_t ray){
             voxel.id = target.id;
             voxel.hit = true;
             return voxel;
-        }*/
+        }
 
         v_add = vec3(0,0,0);
 
@@ -268,7 +278,7 @@ voxel_t Raycast(ray_t ray){
         r_pos += v_add;
         q++;
 
-        while(!utils_contained(uvec3(l_pos), uvec3(r_pos), depth)){
+        /*while(!utils_contained(uvec3(l_pos), uvec3(r_pos), depth)){
             depth--;
         }
 
@@ -294,7 +304,7 @@ voxel_t Raycast(ray_t ray){
             }
             nodeStack[depth] = leaf.n_next;
             offset = leaf.n_next;
-        }
+        }*/
     }
     //if(inBox){imageStore(OutputImage, ivec2(gl_GlobalInvocationID.xy), vec4(0,0,1,1));}
     //imageStore(OutputImage, ivec2(gl_GlobalInvocationID.xy), vec4(0,1,0,1));

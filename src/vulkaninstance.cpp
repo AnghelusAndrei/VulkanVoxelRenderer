@@ -40,7 +40,7 @@ void VulkanInstance::render()
         device_.waitForFences(1, &imagesInFlightFences_[imageIndex], VK_TRUE, UINT64_MAX);
     }
     imagesInFlightFences_[imageIndex] = inFlightFences_[currentFrame_];
-    device_.waitIdle();
+
     vk::SubmitInfo submitInfo{};
 
     vk::Semaphore waitSemaphores[] = {imageAvailableSemaphores_[currentFrame_]}; // K_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
@@ -114,7 +114,7 @@ void VulkanInstance::update()
     imagesInFlightFences_.clear();
     imageAvailableSemaphores_.clear();
     renderFinishedSemaphores_.clear();
-    jointDescriptorSets_.clear();
+
     commandBuffers_.clear();
     device_.destroyPipeline(renderPipeline_);
     device_.destroyPipeline(lightingPipeline_);
@@ -122,12 +122,8 @@ void VulkanInstance::update()
     device_.destroyPipelineLayout(renderPipelineLayout_);
     device_.destroyPipelineLayout(lightingPipelineLayout_);
     device_.destroyPipelineLayout(raycastPipelineLayout_);
-    renderDescriptorSets_.clear();
-    lightingDescriptorSets_.clear();
-    raycastDescriptorSets_.clear();
-    device_.destroyDescriptorSetLayout(renderSetLayout_);
-    device_.destroyDescriptorSetLayout(lightingSetLayout_);
-    device_.destroyDescriptorSetLayout(raycastSetLayout_);
+    descriptorSets.clear();
+    device_.destroyDescriptorSetLayout(descriptorSetLayout);
     device_.destroySampler(imageSampler_);
 
     for (auto &imageView : imageViews_)
@@ -135,9 +131,7 @@ void VulkanInstance::update()
     imageViews_.clear();
     images_.clear();
     device_.destroySwapchainKHR(swapChain_);
-    device_.destroyDescriptorPool(renderPool_);
-    device_.destroyDescriptorPool(lightingPool_);
-    device_.destroyDescriptorPool(raycastPool_);
+    device_.destroyDescriptorPool(descriptorSetPool);
     device_.destroyCommandPool(commandPool_);
     for(auto buffer:uniformBuffers_)
     {
@@ -158,7 +152,7 @@ VulkanInstance::~VulkanInstance()
     imagesInFlightFences_.clear();
     imageAvailableSemaphores_.clear();
     renderFinishedSemaphores_.clear();
-    jointDescriptorSets_.clear();
+
     commandBuffers_.clear();
     device_.destroyPipeline(renderPipeline_);
     device_.destroyPipeline(lightingPipeline_);
@@ -166,12 +160,10 @@ VulkanInstance::~VulkanInstance()
     device_.destroyPipelineLayout(renderPipelineLayout_);
     device_.destroyPipelineLayout(lightingPipelineLayout_);
     device_.destroyPipelineLayout(raycastPipelineLayout_);
-    renderDescriptorSets_.clear();
-    lightingDescriptorSets_.clear();
-    raycastDescriptorSets_.clear();
-    device_.destroyDescriptorSetLayout(renderSetLayout_);
-    device_.destroyDescriptorSetLayout(lightingSetLayout_);
-    device_.destroyDescriptorSetLayout(raycastSetLayout_);
+    descriptorSets.clear();
+
+    device_.destroyDescriptorSetLayout(descriptorSetLayout);
+
     device_.destroySampler(imageSampler_);
 
     for (auto &imageView : imageViews_)
@@ -181,9 +173,7 @@ VulkanInstance::~VulkanInstance()
 
     device_.destroySwapchainKHR(swapChain_);
     instance_.destroySurfaceKHR(surface_);
-    device_.destroyDescriptorPool(renderPool_);
-    device_.destroyDescriptorPool(lightingPool_);
-    device_.destroyDescriptorPool(raycastPool_);
+    device_.destroyDescriptorPool(descriptorSetPool);
     device_.destroyCommandPool(commandPool_);
     utils_destroyBuffer(stagingBuffer_);
     utils_destroyBuffer(octreeBuffer_);
@@ -336,9 +326,9 @@ void VulkanInstance::createPermanentObjects()
     if ((result = (vk::Result)vmaCreateAllocator(&allocator_create_info, &allocator_)) != vk::Result::eSuccess)
         throw EXCEPTION("Failed to create allocator", result);
 
-    stagingBuffer_ = utils_createBuffer(65536, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
-    octreeBuffer_ = utils_createBuffer(65536, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    lightingBuffer_ = utils_createBuffer(65536, vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    stagingBuffer_ = utils_createBuffer(2396744*sizeof(uint32_t), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
+    octreeBuffer_ = utils_createBuffer(2396744*sizeof(uint32_t), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    lightingBuffer_ = utils_createBuffer(2396744*sizeof(uint32_t), vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
 
 void VulkanInstance::createSwapchainObjects()
@@ -402,9 +392,7 @@ void VulkanInstance::createSwapchainObjects()
         uniformBuffers_[i]=utils_createBuffer(sizeof(UBO), vk::BufferUsageFlagBits::eUniformBuffer, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
     }
     LOGGING->info() << "Create uniform buffers" << std::endl;
-    raycastPool_ = utils_createDescriptorPool({vk::DescriptorType::eUniformBuffer, vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageImage});
-    lightingPool_ = utils_createDescriptorPool({vk::DescriptorType::eUniformBuffer, vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageBuffer});
-    renderPool_ = utils_createDescriptorPool({vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageImage});
+    descriptorSetPool = utils_createDescriptorPool({vk::DescriptorType::eUniformBuffer, vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageImage});
 
     for (size_t i = 0; i < images_.size(); i++)
     {
@@ -450,13 +438,9 @@ void VulkanInstance::createSwapchainObjects()
         throw EXCEPTION("Failed to create the sampler", result);
     }
     LOGGING->info() << "Created sampler" << std::endl;
-    raycastSetLayout_ = utils_createDescriptorSetLayout({{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {2, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {3, vk::DescriptorType::eStorageImage, 1, vk::ShaderStageFlagBits::eCompute, &imageSampler_}});
-    lightingSetLayout_ = utils_createDescriptorSetLayout({{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {2, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}});
-    renderSetLayout_ = utils_createDescriptorSetLayout({{0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {1, vk::DescriptorType::eStorageImage, 1, vk::ShaderStageFlagBits::eCompute, &imageSampler_}});
+    descriptorSetLayout = utils_createDescriptorSetLayout({{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {2, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {3, vk::DescriptorType::eStorageImage, 1, vk::ShaderStageFlagBits::eCompute, &imageSampler_}});
     LOGGING->info() << "Created descriptor set layouts" << std::endl;
-    raycastDescriptorSets_ = utils_allocateDescriptorSets(raycastPool_, raycastSetLayout_);
-    lightingDescriptorSets_ = utils_allocateDescriptorSets(lightingPool_, lightingSetLayout_);
-    renderDescriptorSets_ = utils_allocateDescriptorSets(renderPool_, renderSetLayout_);
+    descriptorSets = utils_allocateDescriptorSets(descriptorSetPool, descriptorSetLayout);
     LOGGING->info() << "Created descriptor sets" << std::endl;
     for (size_t i = 0; i < images_.size(); i++)
     {
@@ -475,49 +459,14 @@ void VulkanInstance::createSwapchainObjects()
         imageInfo.sampler = imageSampler_;
 
         std::vector<vk::WriteDescriptorSet> writeDescriptorSets;
-        writeDescriptorSets.push_back(vk::WriteDescriptorSet{raycastDescriptorSets_[i], 0, 0, vk::DescriptorType::eUniformBuffer, nullptr, uniformBufferInfo, nullptr, nullptr});
-        writeDescriptorSets.push_back(vk::WriteDescriptorSet{raycastDescriptorSets_[i], 1, 0, vk::DescriptorType::eStorageBuffer, nullptr, octreeBufferInfo, nullptr, nullptr});
-        writeDescriptorSets.push_back(vk::WriteDescriptorSet{raycastDescriptorSets_[i], 2, 0, vk::DescriptorType::eStorageBuffer, nullptr, lightingBufferInfo, nullptr, nullptr});
-        writeDescriptorSets.push_back(vk::WriteDescriptorSet{raycastDescriptorSets_[i], 3, 0, vk::DescriptorType::eStorageImage, imageInfo, nullptr, nullptr, nullptr});
+        writeDescriptorSets.push_back(vk::WriteDescriptorSet{descriptorSets[i], 0, 0, vk::DescriptorType::eUniformBuffer, nullptr, uniformBufferInfo, nullptr, nullptr});
+        writeDescriptorSets.push_back(vk::WriteDescriptorSet{descriptorSets[i], 1, 0, vk::DescriptorType::eStorageBuffer, nullptr, octreeBufferInfo, nullptr, nullptr});
+        writeDescriptorSets.push_back(vk::WriteDescriptorSet{descriptorSets[i], 2, 0, vk::DescriptorType::eStorageBuffer, nullptr, lightingBufferInfo, nullptr, nullptr});
+        writeDescriptorSets.push_back(vk::WriteDescriptorSet{descriptorSets[i], 3, 0, vk::DescriptorType::eStorageImage, imageInfo, nullptr, nullptr, nullptr});
 
         device_.updateDescriptorSets(writeDescriptorSets, nullptr);
     }
 
-    for (size_t i = 0; i < images_.size(); i++)
-    {
-        vk::DescriptorBufferInfo uniformBufferInfo{};
-        uniformBufferInfo.buffer = uniformBuffers_[i].buffer;
-        uniformBufferInfo.range = VK_WHOLE_SIZE;
-        vk::DescriptorBufferInfo octreeBufferInfo{};
-        octreeBufferInfo.buffer = octreeBuffer_.buffer;
-        octreeBufferInfo.range = VK_WHOLE_SIZE;
-        vk::DescriptorBufferInfo lightingBufferInfo{};
-        lightingBufferInfo.buffer = lightingBuffer_.buffer;
-        lightingBufferInfo.range = VK_WHOLE_SIZE;
-        std::vector<vk::WriteDescriptorSet> writeDescriptorSets;
-        writeDescriptorSets.push_back(vk::WriteDescriptorSet{lightingDescriptorSets_[i], 0, 0, vk::DescriptorType::eUniformBuffer, nullptr, uniformBufferInfo, nullptr, nullptr});
-        writeDescriptorSets.push_back(vk::WriteDescriptorSet{lightingDescriptorSets_[i], 1, 0, vk::DescriptorType::eStorageBuffer, nullptr, octreeBufferInfo, nullptr, nullptr});
-        writeDescriptorSets.push_back(vk::WriteDescriptorSet{lightingDescriptorSets_[i], 2, 0, vk::DescriptorType::eStorageBuffer, nullptr, lightingBufferInfo, nullptr, nullptr});
-
-        device_.updateDescriptorSets(writeDescriptorSets, nullptr);
-    }
-
-    for (size_t i = 0; i < images_.size(); i++)
-    {
-        vk::DescriptorBufferInfo lightingBufferInfo{};
-        lightingBufferInfo.buffer = lightingBuffer_.buffer;
-        lightingBufferInfo.range = VK_WHOLE_SIZE;
-        vk::DescriptorImageInfo imageInfo{};
-        imageInfo.imageView = imageViews_[i];
-        imageInfo.imageLayout = vk::ImageLayout::eGeneral;
-        imageInfo.sampler = imageSampler_;
-
-        std::vector<vk::WriteDescriptorSet> writeDescriptorSets;
-        writeDescriptorSets.push_back(vk::WriteDescriptorSet{renderDescriptorSets_[i], 0, 0, vk::DescriptorType::eStorageBuffer, nullptr, lightingBufferInfo, nullptr, nullptr});
-        writeDescriptorSets.push_back(vk::WriteDescriptorSet{renderDescriptorSets_[i], 1, 0, vk::DescriptorType::eStorageImage, imageInfo, nullptr, nullptr, nullptr});
-
-        device_.updateDescriptorSets(writeDescriptorSets, nullptr);
-    }
     LOGGING->info() << "Updated descriptor sets" << std::endl;
     SpecializationConstants constants;
     vk::ShaderModule raycastModule = utils_createShaderModule("shaders/raycast.spv");
@@ -527,7 +476,7 @@ void VulkanInstance::createSwapchainObjects()
     raycastShaderInfo.pName = "main";
     constants.raycast.window_height=600;
     constants.raycast.window_width=800;
-    constants.raycast.octreeDepth=3;
+    constants.raycast.octreeDepth=7;
     vk::SpecializationInfo raycastSpecializationInfo;
     std::vector<vk::SpecializationMapEntry> raycastSpecializationEntries;
     raycastSpecializationEntries.push_back(vk::SpecializationMapEntry{0, offsetof(RaycastSpecialization, window_width), sizeof(uint32_t)});
@@ -542,7 +491,7 @@ void VulkanInstance::createSwapchainObjects()
 
     vk::PipelineLayoutCreateInfo raycastLayoutCreateInfo{};
     raycastLayoutCreateInfo.setLayoutCount = 1;
-    raycastLayoutCreateInfo.pSetLayouts = &raycastSetLayout_;
+    raycastLayoutCreateInfo.pSetLayouts = &descriptorSetLayout;
 
     raycastPipelineLayout_ = device_.createPipelineLayout(raycastLayoutCreateInfo);
 
@@ -575,7 +524,7 @@ void VulkanInstance::createSwapchainObjects()
 
     vk::PipelineLayoutCreateInfo lightingLayoutCreateInfo{};
     lightingLayoutCreateInfo.setLayoutCount = 1;
-    lightingLayoutCreateInfo.pSetLayouts = &lightingSetLayout_;
+    lightingLayoutCreateInfo.pSetLayouts = &descriptorSetLayout;
 
     lightingPipelineLayout_ = device_.createPipelineLayout(lightingLayoutCreateInfo);
 
@@ -609,7 +558,7 @@ void VulkanInstance::createSwapchainObjects()
     vk::PipelineLayoutCreateInfo renderLayoutCreateInfo{};
     renderLayoutCreateInfo.sType = vk::StructureType::ePipelineLayoutCreateInfo;
     renderLayoutCreateInfo.setLayoutCount = 1;
-    renderLayoutCreateInfo.pSetLayouts = &renderSetLayout_;
+    renderLayoutCreateInfo.pSetLayouts = &descriptorSetLayout;
 
     renderPipelineLayout_ = device_.createPipelineLayout(renderLayoutCreateInfo);
 
@@ -640,30 +589,26 @@ void VulkanInstance::createSwapchainObjects()
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, octreeBuffer_.buffer, 0, 65536}},
+                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, octreeBuffer_.buffer, 0, VK_WHOLE_SIZE}},
                                            std::vector<vk::ImageMemoryBarrier>{
                                                {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, raycastPipeline_);
-        commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, raycastPipelineLayout_, 0, 1, &raycastDescriptorSets_[i], 0, nullptr);
-        commandBuffers_[i].dispatch(engine_->config_.window_width / 16 + 1, engine_->config_.window_height / 16 + 1, 1); // TODO
+        commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, raycastPipelineLayout_, 0, 1, &descriptorSets[i], 0, nullptr);
+        commandBuffers_[i].dispatch(ceil(engine_->config_.window_width / 8.0)  , ceil(engine_->config_.window_height / 8.0), 1); // TODO
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, lightingBuffer_.buffer, 0, 65536}},
-                                           std::vector<vk::ImageMemoryBarrier>{
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
+                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, lightingBuffer_.buffer, 0, VK_WHOLE_SIZE}},
+                                           std::vector<vk::ImageMemoryBarrier>{});
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, lightingPipeline_);
-        commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, lightingPipelineLayout_, 0, 1, &lightingDescriptorSets_[i], 0, nullptr);
         commandBuffers_[i].dispatch(65536, 1, 1); // TODO
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, lightingBuffer_.buffer, 0, 65536}},
-                                           std::vector<vk::ImageMemoryBarrier>{
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
+                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, lightingBuffer_.buffer, 0, VK_WHOLE_SIZE}},
+                                           std::vector<vk::ImageMemoryBarrier>{});
 
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, renderPipeline_);
-        commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, renderPipelineLayout_, 0, 1, &renderDescriptorSets_[i], 0, nullptr);
         commandBuffers_[i].dispatch(engine_->config_.window_width / 16 + 1, engine_->config_.window_height / 16 + 1, 1); // TODO
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags{}, {},
@@ -677,33 +622,31 @@ void VulkanInstance::createSwapchainObjects()
         vk::CommandBufferBeginInfo beginInfo{};
 
         commandBuffers_[i].begin(beginInfo);
-        commandBuffers_[i].copyBuffer(stagingBuffer_.buffer, octreeBuffer_.buffer, vk::BufferCopy{0, 0, 65536});
+        commandBuffers_[i].copyBuffer(stagingBuffer_.buffer, octreeBuffer_.buffer, vk::BufferCopy{0, 0, 2396744*sizeof(uint32_t)});
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, octreeBuffer_.buffer, 0, 65536}},
+                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, octreeBuffer_.buffer, 0, VK_WHOLE_SIZE}},
                                            std::vector<vk::ImageMemoryBarrier>{
                                                {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i - images_.size()], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, raycastPipeline_);
-        commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, raycastPipelineLayout_, 0, 1, &raycastDescriptorSets_[i - images_.size()], 0, nullptr);
-        commandBuffers_[i].dispatch(engine_->config_.window_width / 16 + 1, engine_->config_.window_height / 16 + 1, 1); // TODO
+        commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, raycastPipelineLayout_, 0, 1, &descriptorSets[i - images_.size()], 0, nullptr);
+        commandBuffers_[i].dispatch(ceil(engine_->config_.window_width / 8.0), ceil(engine_->config_.window_height / 8.0), 1); // TODO
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, lightingBuffer_.buffer, 0, 65536}},
+                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, lightingBuffer_.buffer, 0, VK_WHOLE_SIZE}},
                                            std::vector<vk::ImageMemoryBarrier>{
                                                {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i - images_.size()], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, lightingPipeline_);
-        commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, lightingPipelineLayout_, 0, 1, &lightingDescriptorSets_[i - images_.size()], 0, nullptr);
         commandBuffers_[i].dispatch(65536, 1, 1); // TODO
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
-                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, lightingBuffer_.buffer, 0, 65536}},
+                                               {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, lightingBuffer_.buffer, 0, VK_WHOLE_SIZE}},
                                            std::vector<vk::ImageMemoryBarrier>{
                                                {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, images_[i - images_.size()], {vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS}}});
 
         commandBuffers_[i].bindPipeline(vk::PipelineBindPoint::eCompute, renderPipeline_);
-        commandBuffers_[i].bindDescriptorSets(vk::PipelineBindPoint::eCompute, renderPipelineLayout_, 0, 1, &renderDescriptorSets_[i - images_.size()], 0, nullptr);
         commandBuffers_[i].dispatch(engine_->config_.window_width / 16 + 1, engine_->config_.window_height / 16 + 1, 1); // TODO
 
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags{}, {},

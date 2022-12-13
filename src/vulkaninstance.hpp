@@ -132,17 +132,17 @@ private:
     std::vector<VmaBuffer> uniformBuffers_;
     size_t currentFrame_ = 0;
     vk::CommandPool commandPool_;
-    vk::DescriptorPool raycastPool_, lightingPool_, renderPool_;
+    vk::DescriptorPool descriptorSetPool;
     vk::SwapchainKHR swapChain_;
     std::vector<vk::Image> images_;
     std::vector<vk::ImageView> imageViews_;
     vk::Sampler imageSampler_;
-    vk::DescriptorSetLayout raycastSetLayout_, lightingSetLayout_, renderSetLayout_;
-    std::vector<vk::DescriptorSet> raycastDescriptorSets_, lightingDescriptorSets_, renderDescriptorSets_;
+    vk::DescriptorSetLayout descriptorSetLayout;
+    std::vector<vk::DescriptorSet> descriptorSets;
     vk::PipelineLayout raycastPipelineLayout_, lightingPipelineLayout_, renderPipelineLayout_;
     vk::Pipeline raycastPipeline_, lightingPipeline_, renderPipeline_;
     std::vector<vk::CommandBuffer> commandBuffers_;
-    std::vector<std::vector<vk::DescriptorSet>> jointDescriptorSets_;
+
     std::vector<vk::Semaphore> imageAvailableSemaphores_, renderFinishedSemaphores_;
     std::vector<vk::Fence> inFlightFences_, imagesInFlightFences_;
 
