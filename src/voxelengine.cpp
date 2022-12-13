@@ -20,6 +20,8 @@ void VoxelEngine::run()
 {
     running_=true;
   
+  	const siv::PerlinNoise::seed_type seed = 123456u;
+	const siv::PerlinNoise perlin{ seed };
 
 
     glm::vec3 initialPosition = glm::vec3(0,0,0);
@@ -36,10 +38,14 @@ void VoxelEngine::run()
     for(int i = 0; i < octreeLength; i++){
         for(int j = 0; j < octreeLength; j++){
             for(int k = 0; k < octreeLength; k++){
-                int randIn5 = rand()%100;
-                if(randIn5 >1)continue;
+                float randIn5 = perlin.octave3D_01(((double)i * 0.01), ((double)j * 0.01), ((double)k * 0.01), 4);
+                if(randIn5 < 0.5)continue;
 
-                glm::u8vec3 rgb = glm::u8vec3((uint)(rand()%255), (uint)(rand()%255), (uint)(rand()%255));
+                int r = 255 * perlin.octave3D_01(((double)i * 0.02), ((double)j * 0.01), ((double)k * 0.01), 4);
+                int g = 255 * perlin.octave3D_01(((double)i * 0.01), ((double)j * 0.02), ((double)k * 0.01), 4);
+                int b = 255 * perlin.octave3D_01(((double)i * 0.01), ((double)j * 0.01), ((double)k * 0.02), 4);
+
+                glm::u8vec3 rgb = glm::u8vec3((uint)(r), (uint)(g), (uint)(b));
                 Octree::Leaf node;
                 node.isNode = false;
                 node.type = Octree::DEFAULT;
@@ -51,7 +57,7 @@ void VoxelEngine::run()
     
     octree->upload(instance_);
     
-    while (!glfwWindowShouldClose(window))
+    while (!glfwWindowShouldClose(window) && glfwGetKey(window, GLFW_KEY_ESCAPE)!= GLFW_PRESS)
     {
         camera->input();
         glfwPollEvents();

@@ -93,6 +93,7 @@ bool utils_contained(uvec3 position1, uvec3 position2, uint depth){
 struct voxel_t{
     bool hit;
     uint id;
+    vec3 normal;
 };
 
 struct ray_t{
@@ -233,6 +234,7 @@ voxel_t Raycast(ray_t ray){
         if(node.l_type == 1){
             voxel.id = target.id;
             voxel.hit = true;
+            voxel.normal = normal;
             return voxel;
         }
 
@@ -343,8 +345,12 @@ void main()
     voxel_t voxel = Raycast(Ray);
 
     if(voxel.hit){
-        Node voxel = readNode(octree.data[voxel.id]);
-        color += vec3(voxel.l_data.z/255.0,voxel.l_data.y/255.0,voxel.l_data.x/255.0);
+        Node voxel_node = readNode(octree.data[voxel.id]);
+        color += vec3(voxel_node.l_data.z/255.0,voxel_node.l_data.y/255.0,voxel_node.l_data.x/255.0);
+        /*color -= vec3(0.3);
+        color += vec3(0.3) * voxel.normal.x;
+        color += vec3(0.2) * voxel.normal.y;
+        color += vec3(0.1) * voxel.normal.z;*/
     }
 
     imageStore(OutputImage, pixel_coords, vec4(color,1));

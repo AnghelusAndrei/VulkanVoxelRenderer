@@ -10,3 +10,6 @@
 [submodule "lib/VulkanMemoryAllocator"]
 	path = lib/VulkanMemoryAllocator
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+[submodule "lib/PerlinNoise"]
+	path = lib/PerlinNoise
+	url = https://github.com/Reputeless/PerlinNoise.git

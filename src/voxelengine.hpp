@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "vulkaninstance.hpp"
+#include "PerlinNoise.hpp"
 
 class Object;
 class Octree;
