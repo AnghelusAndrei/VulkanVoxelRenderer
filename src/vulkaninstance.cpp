@@ -326,9 +326,14 @@ void VulkanInstance::createPermanentObjects()
     if ((result = (vk::Result)vmaCreateAllocator(&allocator_create_info, &allocator_)) != vk::Result::eSuccess)
         throw EXCEPTION("Failed to create allocator", result);
 
-    stagingBuffer_ = utils_createBuffer(2396744*sizeof(uint32_t), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
-    octreeBuffer_ = utils_createBuffer(2396744*sizeof(uint32_t), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    lightingBuffer_ = utils_createBuffer(2396744*sizeof(uint32_t), vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    //2396744 for depth 7
+    //19173960 for depth 8
+    //153391688 for depth 9
+
+    stagingBuffer_ = utils_createBuffer(19173960*sizeof(uint32_t), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
+    octreeBuffer_ = utils_createBuffer(19173960*sizeof(uint32_t), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    lightingBuffer_ = utils_createBuffer(19173960*sizeof(uint32_t), vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
 
 void VulkanInstance::createSwapchainObjects()
@@ -476,7 +481,7 @@ void VulkanInstance::createSwapchainObjects()
     raycastShaderInfo.pName = "main";
     constants.raycast.window_height=600;
     constants.raycast.window_width=800;
-    constants.raycast.octreeDepth=7;
+    constants.raycast.octreeDepth=8;
     vk::SpecializationInfo raycastSpecializationInfo;
     std::vector<vk::SpecializationMapEntry> raycastSpecializationEntries;
     raycastSpecializationEntries.push_back(vk::SpecializationMapEntry{0, offsetof(RaycastSpecialization, window_width), sizeof(uint32_t)});
@@ -622,7 +627,7 @@ void VulkanInstance::createSwapchainObjects()
         vk::CommandBufferBeginInfo beginInfo{};
 
         commandBuffers_[i].begin(beginInfo);
-        commandBuffers_[i].copyBuffer(stagingBuffer_.buffer, octreeBuffer_.buffer, vk::BufferCopy{0, 0, 2396744*sizeof(uint32_t)});
+        commandBuffers_[i].copyBuffer(stagingBuffer_.buffer, octreeBuffer_.buffer, vk::BufferCopy{0, 0, 19173960*sizeof(uint32_t)});
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
                                                {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, octreeBuffer_.buffer, 0, VK_WHOLE_SIZE}},
@@ -780,6 +785,7 @@ VulkanInstance::SwapChainSupportDetails VulkanInstance::utils_getSwapChainSuppor
     if (supportDetails.presentMode != vk::PresentModeKHR::eMailbox)
         supportDetails.presentMode = vk::PresentModeKHR::eFifo;
 
+    supportDetails.presentMode = vk::PresentModeKHR::eImmediate;
     supportDetails.extent = vk::Extent2D{
         (uint32_t)engine_->config_.window_width,
         (uint32_t)engine_->config_.window_height};

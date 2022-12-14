@@ -5,7 +5,7 @@ Camera::Camera(GLFWwindow *window,  glm::vec3 position_, glm::vec3 direction_){
     window_ = window;
     position = position_;
     direction = direction_;
-    speed=SETTINGS->get<double>("speed", 10.0);
+    speed=SETTINGS->get<double>("speed", 50.0);
 }
 
 float Camera::FixX(float ang)

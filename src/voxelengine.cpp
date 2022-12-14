@@ -27,9 +27,9 @@ void VoxelEngine::run()
     glm::vec3 initialPosition = glm::vec3(0,0,0);
     glm::vec3 initialDirection = glm::vec3(1,0,0);
 
-    int octreeLength = 1<<7;
+    int octreeLength = 1<<8;
 
-    Octree *octree = new Octree(7);
+    Octree *octree = new Octree(8);
     Camera *camera = new Camera(window, initialPosition, initialDirection);
     instance_->setCamera(camera);
     std::thread renderThread(&VulkanInstance::run, instance_);
@@ -38,12 +38,12 @@ void VoxelEngine::run()
     for(int i = 0; i < octreeLength; i++){
         for(int j = 0; j < octreeLength; j++){
             for(int k = 0; k < octreeLength; k++){
-                float randIn5 = perlin.octave3D_01(((double)i * 0.01), ((double)j * 0.01), ((double)k * 0.01), 4);
+                float randIn5 = perlin.octave3D_01(((double)i * 0.01), ((double)j * 0.01), ((double)k * 0.01), 2);
                 if(randIn5 < 0.5)continue;
 
-                int r = 255 * perlin.octave3D_01(((double)i * 0.02), ((double)j * 0.01), ((double)k * 0.01), 4);
-                int g = 255 * perlin.octave3D_01(((double)i * 0.01), ((double)j * 0.02), ((double)k * 0.01), 4);
-                int b = 255 * perlin.octave3D_01(((double)i * 0.01), ((double)j * 0.01), ((double)k * 0.02), 4);
+                int r = 255 * perlin.octave3D_01(((double)i * 0.02), ((double)j * 0.01), ((double)k * 0.01), 1);
+                int g = 255 * perlin.octave3D_01(((double)i * 0.01), ((double)j * 0.02), ((double)k * 0.01), 1);
+                int b = 255 * perlin.octave3D_01(((double)i * 0.01), ((double)j * 0.01), ((double)k * 0.02), 1);
 
                 glm::u8vec3 rgb = glm::u8vec3((uint)(r), (uint)(g), (uint)(b));
                 Octree::Leaf node;
