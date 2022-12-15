@@ -41,9 +41,9 @@ void VoxelEngine::run()
                 float randIn5 = perlin.octave3D_01(((double)i * 0.01), ((double)j * 0.01), ((double)k * 0.01), 2);
                 if(randIn5 < 0.5)continue;
 
-                int r = 255 * perlin.octave3D_01(((double)i * 0.02), ((double)j * 0.01), ((double)k * 0.01), 1);
-                int g = 255 * perlin.octave3D_01(((double)i * 0.01), ((double)j * 0.02), ((double)k * 0.01), 1);
-                int b = 255 * perlin.octave3D_01(((double)i * 0.01), ((double)j * 0.01), ((double)k * 0.02), 1);
+                int r = 255 * perlin.octave3D_01(((double)i * 0.02), ((double)j * 0.01), ((double)k * 0.01), 3);
+                int g = 255 * perlin.octave3D_01(((double)i * 0.01), ((double)j * 0.02), ((double)k * 0.01), 3);
+                int b = 255 * perlin.octave3D_01(((double)i * 0.01), ((double)j * 0.01), ((double)k * 0.02), 3);
 
                 glm::u8vec3 rgb = glm::u8vec3((uint)(r), (uint)(g), (uint)(b));
                 Octree::Leaf node;
