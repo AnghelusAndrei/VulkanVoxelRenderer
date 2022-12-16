@@ -80,13 +80,20 @@ Node readNode(uint data){
 }
 
 bool inBounds(vec3 v, float n) {return 0<=v.x&&v.x<=n &&0<=v.y&&v.y<=n&&0<=v.z&&v.z<n;}
-// 1 << (octreeDepth - depth)
+
 uint utils_locate(uvec3 position, uint p2){
-    return (int(bool(position.x & p2)) << 2) | (int(bool(position.y & p2)) << 1) | (int(bool(position.z & p2)));
+    return 
+    (int(bool(position.x & p2)) << 2) | 
+    (int(bool(position.y & p2)) << 1) | 
+    (int(bool(position.z & p2)));
 }
-bool utils_contained(uvec3 position1, uvec3 position2, uint p2){
-    return ((position1.x / p2 == position2.x / p2) && (position1.y / p2 == position2.y / p2) && (position1.z / p2 == position2.z / p2));
+bool utils_contained(uvec3 position1, uvec3 position2, uint non_p2){
+    return 
+    ((position1.x ^ (~position2.x)) >= non_p2) && 
+    ((position1.y ^ (~position2.y)) >= non_p2) && 
+    ((position1.z ^ (~position2.z)) >= non_p2);
 }
+
 
 struct voxel_t{
     bool hit;
@@ -174,8 +181,8 @@ voxel_t Raycast(ray_t ray){
 
     //a stack of parent nodes in the octree
     //using this makes leaf lookup much faster
-    //uint nodeStack[max_depth];
-    //nodeStack[0] = 0;
+    uint nodeStack[max_depth];
+    nodeStack[0] = 0;
     uint offset = 0;
     uint depth = 0;
 
@@ -187,8 +194,8 @@ voxel_t Raycast(ray_t ray){
         vec4 intersection = intersect(ray.inverted_direction, ray.origin, ray.direction, vec3(0,0,0), vec3(octreeLength,octreeLength,octreeLength));
         if(intersection.w < 0)return voxel;
         r_pos = intersection.xyz;
-        l_pos = r_pos;
     }
+    l_pos = r_pos;
 
     leaf_t target;
 
@@ -198,16 +205,18 @@ voxel_t Raycast(ray_t ray){
     //TODO: good hierarchy system
     while(inBounds(r_pos, octreeLength)){
         //find the octree leaf coresponding to the ray's current position
-        /*while(!utils_contained(uvec3(l_pos), uvec3(r_pos), p2c[depth])){
+        uvec3 ur_pos = uvec3(r_pos);
+        uvec3 ul_pos = uvec3(l_pos);
+
+        while(q > 0 && utils_contained(ur_pos, ul_pos, uint(~p2c[depth])) && depth > 0){
             depth--;
         }
         offset = nodeStack[depth];
-        depth++;*/
+        depth++;
 
-        offset = 0;
-        for (depth = 1; depth <= octreeDepth; depth++)
+        for (depth ; depth <= octreeDepth; depth++)
         {
-            offset += utils_locate(uvec3(r_pos), p2c[depth]);
+            offset += utils_locate(ur_pos, p2c[depth]);
 
             Node leaf = readNode(octree.data[offset]);
             if(!leaf.isNode){
@@ -217,12 +226,15 @@ voxel_t Raycast(ray_t ray){
                     return voxel;
                 }
                 target.size = p2c[depth];
-                target.position.x = uint(r_pos.x) - uint(r_pos.x)%target.size;
-                target.position.y = uint(r_pos.y) - uint(r_pos.y)%target.size;
-                target.position.z = uint(r_pos.z) - uint(r_pos.z)%target.size;
+                uint size = target.size - 1;
+                target.position = uvec3(
+                    ur_pos.x & (~(size)), 
+                    ur_pos.y & (~(size)), 
+                    ur_pos.z & (~(size))
+                );
                 break;
             }
-            //nodeStack[depth] = leaf.n_next;
+            nodeStack[depth] = leaf.n_next;
             offset = leaf.n_next;
         }
 
