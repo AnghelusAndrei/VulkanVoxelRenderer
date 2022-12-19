@@ -41,6 +41,10 @@ layout(rgba8, set=0, binding=3) uniform writeonly image2D OutputImage;
 
 uint octreeLength;
 
+const uint contained_mask[] = {
+    4294967295,4294967294,4294967292,4294967288,4294967280,4294967264,4294967232,4294967168,
+    4294967040,4294966784,4294966272,4294965248,4294963200,4294959104,4294950912,4294934528
+};
 
 const uint isNode_mask=1;
 const uint n_count_mask=15;
@@ -87,11 +91,11 @@ uint utils_locate(uvec3 position, uint p2){
     (int(bool(position.y & p2)) << 1) | 
     (int(bool(position.z & p2)));
 }
-bool utils_contained(uvec3 position1, uvec3 position2, uint non_p2){
+bool utils_contained(uvec3 position1, uvec3 position2, uint mask){
     return 
-    ((position1.x ^ (~position2.x)) >= non_p2) && 
-    ((position1.y ^ (~position2.y)) >= non_p2) && 
-    ((position1.z ^ (~position2.z)) >= non_p2);
+    ((position1.x ^ (~position2.x)) >= mask) && 
+    ((position1.y ^ (~position2.y)) >= mask) && 
+    ((position1.z ^ (~position2.z)) >= mask);
 }
 
 
@@ -207,12 +211,14 @@ voxel_t Raycast(ray_t ray){
         //find the octree leaf coresponding to the ray's current position
         uvec3 ur_pos = uvec3(r_pos);
         uvec3 ul_pos = uvec3(l_pos);
-
-        while(q > 0 && utils_contained(ur_pos, ul_pos, uint(~p2c[depth])) && depth > 0){
-            depth--;
+        
+        if(q > 0){
+            while(!utils_contained(ur_pos, ul_pos, contained_mask[octreeDepth - depth]) && depth > 0){
+                depth--;
+            }
+            offset = nodeStack[depth];
+            depth++;
         }
-        offset = nodeStack[depth];
-        depth++;
 
         for (depth ; depth <= octreeDepth; depth++)
         {
@@ -242,7 +248,7 @@ voxel_t Raycast(ray_t ray){
         l_pos = r_pos;
         r_pos = intersect_inside(ray.inverted_direction, ray.origin, ray.direction, vec3(target.position), vec3(target.position.x + target.size, target.position.y + target.size, target.position.z + target.size));
 
-        if(q > 100)return voxel;
+        if(q > 65)return voxel;
         q++;
     }
     return voxel;
