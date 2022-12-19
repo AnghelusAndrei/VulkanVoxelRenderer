@@ -185,8 +185,8 @@ voxel_t Raycast(ray_t ray){
 
     //a stack of parent nodes in the octree
     //using this makes leaf lookup much faster
-    uint nodeStack[max_depth];
-    nodeStack[0] = 0;
+    //uint nodeStack[max_depth];
+    //nodeStack[0] = 0;
     uint offset = 0;
     uint depth = 0;
 
@@ -212,25 +212,26 @@ voxel_t Raycast(ray_t ray){
         uvec3 ur_pos = uvec3(r_pos);
         uvec3 ul_pos = uvec3(l_pos);
         
-        if(q > 0){
+        //check if the current position and the last position are contained in the traversal node 
+        /*if(q > 0){
             while(!utils_contained(ur_pos, ul_pos, contained_mask[octreeDepth - depth]) && depth > 0){
                 depth--;
             }
             offset = nodeStack[depth];
             depth++;
-        }
+        }*/
 
-        for (depth ; depth <= octreeDepth; depth++)
+        //leaf lookup
+        depth = 0;
+        offset = 0;
+        bool foundLeaf = false;
+        for (depth ; depth < octreeDepth-1; depth++)
         {
             offset += utils_locate(ur_pos, p2c[depth]);
 
-            Node leaf = readNode(octree.data[offset]);
+            Node leaf;
+            leaf.isNode = bool(octree.data[offset] & 1);
             if(!leaf.isNode){
-                if(leaf.l_type == 1){
-                    voxel.id = offset;
-                    voxel.hit = true;
-                    return voxel;
-                }
                 target.size = p2c[depth];
                 uint size = target.size - 1;
                 target.position = uvec3(
@@ -238,10 +239,29 @@ voxel_t Raycast(ray_t ray){
                     ur_pos.y & (~(size)), 
                     ur_pos.z & (~(size))
                 );
+                foundLeaf = true;
                 break;
             }
-            nodeStack[depth] = leaf.n_next;
+            leaf.n_next = uint((octree.data[offset] & 2147483632) >> 4);
+            //nodeStack[depth] = leaf.n_next;
             offset = leaf.n_next;
+        }
+        if(!foundLeaf){
+            offset += utils_locate(ur_pos, p2c[depth]);
+            Node leaf;
+            leaf.l_type = int((octree.data[offset] & 254) >> 1);
+            if(leaf.l_type == 1){
+                voxel.id = offset;
+                voxel.hit = true;
+                return voxel;
+            }
+            target.size = p2c[depth];
+            uint size = target.size - 1;
+            target.position = uvec3(
+                ur_pos.x & (~(size)), 
+                ur_pos.y & (~(size)), 
+                ur_pos.z & (~(size))
+            );
         }
 
 

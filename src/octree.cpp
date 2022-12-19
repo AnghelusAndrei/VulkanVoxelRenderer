@@ -60,7 +60,6 @@ void Octree::insert(glm::uvec3 position, Leaf data)
         offset += utils_locate(position, depth);
         Node node = nodes_[offset];
         if(!node.isNode){
-            Leaf leaf = *reinterpret_cast<Leaf*>(&node);
             uint32_t nextOffset;
             if(freeNodes.empty()){
                 newNode+=8;
@@ -86,7 +85,7 @@ void Octree::insert(glm::uvec3 position, Leaf data)
     if((reinterpret_cast<Leaf*>(&nodes_[i]))->type == 0)nodes_[lastNode].count++;
     nodes_[i] = *reinterpret_cast<Node*>(&data);
 }
-/*
+
 void Octree::insert(glm::uvec3 position, Leaf data, std::function<bool(uint8_t)> func)
 {
     uint32_t offset = 0;
@@ -95,8 +94,8 @@ void Octree::insert(glm::uvec3 position, Leaf data, std::function<bool(uint8_t)>
     for (int depth = 1; depth < depth_; depth++)
     {
         offset += utils_locate(position, depth);
-        Node leaf = nodes_[offset];
-        if(!leaf.isNode){
+        Node node = nodes_[offset];
+        if(!node.isNode){
             uint32_t nextOffset;
             if(freeNodes.empty()){
                 newNode+=8;
@@ -114,17 +113,18 @@ void Octree::insert(glm::uvec3 position, Leaf data, std::function<bool(uint8_t)>
             lastNode = offset;
             offset = nextOffset;
         }else{
-            offset = leaf.next;
+            offset = node.next;
         }
     }
 
     int i = offset + utils_locate(position, depth_);
-    if(func(nodes_[i].leaf.type)){
-        if(nodes_[i].leaf.type == 0)
-            nodes_[lastNode].node.count++;
-        nodes_[i] = data;
+    if(func((reinterpret_cast<Leaf*>(&nodes_[i]))->type)){
+        if((reinterpret_cast<Leaf*>(&nodes_[i]))->type == 0)
+            nodes_[lastNode].count++;
+        nodes_[i] = *reinterpret_cast<Node*>(&data);
     }
 }
+
 void Octree::remove(glm::uvec3 position)
 {
     uint32_t offset = 0;
@@ -133,30 +133,29 @@ void Octree::remove(glm::uvec3 position)
     for (int depth = 1; depth < depth_; depth++)
     {
         int i = offset + utils_locate(position, depth);
-        Node leaf = nodes_[i];
-        if(!leaf.isNode){
+        Node node = nodes_[i];
+        if(!node.isNode){
             return;
         }else{
             localNodes.push(offset);
-            offset = leaf.node.next;
+            offset = node.next;
         }
     }
 
     int i = offset + utils_locate(position, depth_);
     Node removed = {
         .isNode = 0,
-        .leaf = {
-            0,0
-        }
+        .count = 0,
+        .next = 0
     };
     nodes_[i] = removed;
-    nodes_[localNodes.top()].node.count--;
+    nodes_[localNodes.top()].count--;
 
-    while(nodes_[localNodes.top()].node.count <= 0 && !localNodes.empty()){
-        freeNodes.push(nodes_[localNodes.top()].node.next);
+    while(nodes_[localNodes.top()].count <= 0 && !localNodes.empty()){
+        freeNodes.push(nodes_[localNodes.top()].next);
         nodes_[localNodes.top()] = removed;
         localNodes.pop();
-        nodes_[localNodes.top()].node.count--;
+        nodes_[localNodes.top()].count--;
     }
 }
 void Octree::remove(glm::uvec3 position, std::function<bool(uint8_t)> func)
@@ -167,34 +166,34 @@ void Octree::remove(glm::uvec3 position, std::function<bool(uint8_t)> func)
     for (int depth = 1; depth < depth_; depth++)
     {
         int i = offset + utils_locate(position, depth);
-        Node leaf = nodes_[i];
-        if(!leaf.isNode){
+        Node node = nodes_[i];
+        if(!node.isNode){
             return;
         }else{
             localNodes.push(offset);
-            offset = leaf.node.next;
+            offset = node.next;
         }
     }
 
     int i = offset + utils_locate(position, depth_);
     Node removed = {
         .isNode = 0,
-        .leaf = {
-            0,0
-        }
+        .count = 0,
+        .next = 0
     };
-    if(func(nodes_[i].leaf.type)){
+    if(func((reinterpret_cast<Leaf*>(&nodes_[i]))->type)){
         nodes_[i] = removed;
-        nodes_[localNodes.top()].node.count--;
+        nodes_[localNodes.top()].count--;
 
-        while(nodes_[localNodes.top()].node.count <= 0 && !localNodes.empty()){
-            freeNodes.push(nodes_[localNodes.top()].node.next);
+        while(nodes_[localNodes.top()].count <= 0 && !localNodes.empty()){
+            freeNodes.push(nodes_[localNodes.top()].next);
             nodes_[localNodes.top()] = removed;
             localNodes.pop();
-            nodes_[localNodes.top()].node.count--;
+            nodes_[localNodes.top()].count--;
         }
     }
 }
+/*
 void Octree::move(glm::uvec3 position1, glm::uvec3 position2){
     uint32_t offset = 0;
     std::stack<uint32_t> localNodes;
