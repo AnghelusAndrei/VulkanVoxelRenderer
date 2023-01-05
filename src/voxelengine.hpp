@@ -24,13 +24,6 @@ public:
 
     GLFWwindow *window;
     bool running_;
-    //Stats stats;
-    //Camera *camera;
-    //Octree *octree;
-
-    //MaterialCollection *materials;
-    //LightCollection *lights;
-    //ObjectCollection *objects;
     
 private:
     VulkanInstance *instance_;

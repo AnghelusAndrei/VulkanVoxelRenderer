@@ -12,7 +12,14 @@ VulkanInstance::VulkanInstance(VoxelEngine *engine) : engine_(engine)
     createSwapchainObjects();
     LOGGING->info() << "Created swapchain objects" << std::endl;
 }
-
+static void check_vk_result(VkResult err)
+{
+    if (err == 0)
+        return;
+    fprintf(stderr, "[vulkan] Error: VkResult = %d\n", err);
+    if (err < 0)
+        abort();
+}
 void VulkanInstance::run()
 {
     while (engine_->running_)
@@ -131,7 +138,7 @@ void VulkanInstance::update()
     imageViews_.clear();
     images_.clear();
     device_.destroySwapchainKHR(swapChain_);
-    device_.destroyDescriptorPool(descriptorSetPool);
+    device_.destroyDescriptorPool(computeDescriptorSetPool);
     device_.destroyCommandPool(commandPool_);
     for(auto buffer:uniformBuffers_)
     {
@@ -173,7 +180,7 @@ VulkanInstance::~VulkanInstance()
 
     device_.destroySwapchainKHR(swapChain_);
     instance_.destroySurfaceKHR(surface_);
-    device_.destroyDescriptorPool(descriptorSetPool);
+    device_.destroyDescriptorPool(computeDescriptorSetPool);
     device_.destroyCommandPool(commandPool_);
     utils_destroyBuffer(stagingBuffer_);
     utils_destroyBuffer(octreeBuffer_);
@@ -317,6 +324,12 @@ void VulkanInstance::createPermanentObjects()
     computeQueue_ = device_.getQueue(queueSupportDetails.computeFamily.value(), 0);
     presentQueue_ = device_.getQueue(queueSupportDetails.presentFamily.value(), 0);
 
+
+
+
+
+    // Create VMA allocator
+
     VmaAllocatorCreateInfo allocator_create_info{};
     allocator_create_info.vulkanApiVersion = VK_API_VERSION_1_1;
     allocator_create_info.physicalDevice = static_cast<VkPhysicalDevice>(physicalDevice_);
@@ -326,6 +339,49 @@ void VulkanInstance::createPermanentObjects()
     if ((result = (vk::Result)vmaCreateAllocator(&allocator_create_info, &allocator_)) != vk::Result::eSuccess)
         throw EXCEPTION("Failed to create allocator", result);
 
+// Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsLight();
+
+    graphicsDescriptorSetPool = utils_createDescriptorPool(
+        {
+            vk::DescriptorType::eSampler, 
+            vk::DescriptorType::eCombinedImageSampler,
+            vk::DescriptorType::eSampledImage,
+            vk::DescriptorType::eStorageImage,
+            vk::DescriptorType::eUniformTexelBuffer,
+            vk::DescriptorType::eStorageTexelBuffer,
+            vk::DescriptorType::eUniformBuffer,
+            vk::DescriptorType::eStorageBuffer,
+            vk::DescriptorType::eUniformBufferDynamic,
+            vk::DescriptorType::eStorageBufferDynamic,
+            vk::DescriptorType::eInputAttachment,
+        },1000);
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForVulkan(engine_->window, true);
+    ImGui_ImplVulkan_InitInfo init_info = {};
+    init_info.Instance = instance_;
+    init_info.PhysicalDevice = physicalDevice_;
+    init_info.Device = device_;
+    init_info.QueueFamily = queueSupportDetails.presentFamily.value();
+    init_info.Queue = presentQueue_;
+    init_info.PipelineCache = VK_NULL_HANDLE;
+    init_info.DescriptorPool = graphicsDescriptorSetPool;
+    init_info.Subpass = 0;
+    init_info.MinImageCount = engine_->config_.MAX_FRAMES_IN_FLIGHT;
+    init_info.ImageCount = engine_->config_.MAX_FRAMES_IN_FLIGHT;
+    init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    init_info.Allocator = VK_NULL_HANDLE;
+    init_info.CheckVkResultFn = check_vk_result;
+    ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
 
     //2396744 for depth 7
     //19173960 for depth 8
@@ -334,6 +390,9 @@ void VulkanInstance::createPermanentObjects()
     stagingBuffer_ = utils_createBuffer(19173960*sizeof(uint32_t), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
     octreeBuffer_ = utils_createBuffer(19173960*sizeof(uint32_t), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     lightingBuffer_ = utils_createBuffer(19173960*sizeof(uint32_t), vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+
+
 }
 
 void VulkanInstance::createSwapchainObjects()
@@ -397,8 +456,9 @@ void VulkanInstance::createSwapchainObjects()
         uniformBuffers_[i]=utils_createBuffer(sizeof(UBO), vk::BufferUsageFlagBits::eUniformBuffer, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
     }
     LOGGING->info() << "Create uniform buffers" << std::endl;
-    descriptorSetPool = utils_createDescriptorPool({vk::DescriptorType::eUniformBuffer, vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageImage});
+    computeDescriptorSetPool = utils_createDescriptorPool({vk::DescriptorType::eUniformBuffer, vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageBuffer, vk::DescriptorType::eStorageImage}, engine_->config_.MAX_FRAMES_IN_FLIGHT);
 
+    
     for (size_t i = 0; i < images_.size(); i++)
     {
         vk::ImageViewCreateInfo createInfo{};
@@ -445,7 +505,7 @@ void VulkanInstance::createSwapchainObjects()
     LOGGING->info() << "Created sampler" << std::endl;
     descriptorSetLayout = utils_createDescriptorSetLayout({{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {2, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}, {3, vk::DescriptorType::eStorageImage, 1, vk::ShaderStageFlagBits::eCompute, &imageSampler_}});
     LOGGING->info() << "Created descriptor set layouts" << std::endl;
-    descriptorSets = utils_allocateDescriptorSets(descriptorSetPool, descriptorSetLayout);
+    descriptorSets = utils_allocateDescriptorSets(computeDescriptorSetPool, descriptorSetLayout);
     LOGGING->info() << "Created descriptor sets" << std::endl;
     for (size_t i = 0; i < images_.size(); i++)
     {
@@ -511,7 +571,7 @@ void VulkanInstance::createSwapchainObjects()
     if (pipelineResult.result != vk::Result::eSuccess)
         throw EXCEPTION("Failed to create compute pipeline", pipelineResult.result);
     raycastPipeline_ = pipelineResult.value;
-    // device_.destroyShaderModule(raycastModule);
+    device_.destroyShaderModule(raycastModule);
     vk::ShaderModule lightingModule = utils_createShaderModule("shaders/lighting.spv");
     ;
     vk::PipelineShaderStageCreateInfo lightingShaderInfo{};
@@ -544,7 +604,7 @@ void VulkanInstance::createSwapchainObjects()
     if (pipelineResult.result != vk::Result::eSuccess)
         throw EXCEPTION("Failed to create compute pipeline", pipelineResult.result);
     lightingPipeline_ = pipelineResult.value;
-    // device_.destroyShaderModule(lightingModule);
+    device_.destroyShaderModule(lightingModule);
     vk::ShaderModule renderModule = utils_createShaderModule("shaders/render.spv");
     ;
     vk::PipelineShaderStageCreateInfo renderShaderInfo{};
@@ -579,9 +639,9 @@ void VulkanInstance::createSwapchainObjects()
         throw EXCEPTION("Failed to create compute pipeline", pipelineResult.result);
     renderPipeline_ = pipelineResult.value;
     LOGGING->info() << "Created pipelines" << std::endl;
-    commandBuffers_.resize(images_.size() * 2);
-    // device_.destroyShaderModule(renderModule);
+    device_.destroyShaderModule(renderModule);
     vk::CommandBufferAllocateInfo commandBufferAllocateInfo{};
+    commandBuffers_.resize(images_.size() * 2);
     commandBufferAllocateInfo.commandPool = commandPool_;
     commandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
     commandBufferAllocateInfo.commandBufferCount = (uint32_t)commandBuffers_.size();
@@ -709,17 +769,17 @@ VulkanInstance::QueueSupportDetails VulkanInstance::utils_getQueueSupportDetails
  * @param descriptorTypes
  * @return vk::DescriptorPool
  */
-vk::DescriptorPool VulkanInstance::utils_createDescriptorPool(std::vector<vk::DescriptorType> descriptorTypes)
+vk::DescriptorPool VulkanInstance::utils_createDescriptorPool(std::vector<vk::DescriptorType> descriptorTypes, int count)
 {
     std::vector<vk::DescriptorPoolSize> pool_sizes;
     for (vk::DescriptorType type : descriptorTypes)
     {
-        pool_sizes.push_back(vk::DescriptorPoolSize{type, static_cast<uint32_t>(engine_->config_.MAX_FRAMES_IN_FLIGHT)});
+        pool_sizes.push_back(vk::DescriptorPoolSize{type, count});
     }
     vk::DescriptorPoolCreateInfo poolCreateInfo{};
     poolCreateInfo.poolSizeCount = pool_sizes.size();
     poolCreateInfo.pPoolSizes = pool_sizes.data();
-    poolCreateInfo.maxSets = static_cast<uint32_t>(images_.size());
+    poolCreateInfo.maxSets = count;
     vk::DescriptorPool descriptorPool;
     if (device_.createDescriptorPool(&poolCreateInfo, nullptr, &descriptorPool) != vk::Result::eSuccess)
     {

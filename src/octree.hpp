@@ -42,8 +42,8 @@ public:
     void insert(glm::uvec3 position, Leaf data, std::function<bool(uint8_t)> func);
     void remove(glm::uvec3 position);
     void remove(glm::uvec3 position, std::function<bool(uint8_t)> func);
-    //void move(glm::uvec3 position1, glm::uvec3 position2);
-    //void move(glm::uvec3 position1, glm::uvec3 position2, std::function<int(uint8_t, uint8_t)> func); // func == 0 -> canceled, func == 1 -> delete v1, func == 2 -> success
+    void move(glm::uvec3 position1, glm::uvec3 position2);
+    void move(glm::uvec3 position1, glm::uvec3 position2, std::function<int(uint8_t, uint8_t)> func); // func == 0 -> canceled, func == 1 -> delete v1, func == 2 -> success
 
     static uint32_t utils_rgb(uint8_t r, uint8_t g ,uint8_t b) { return ((r << 16) | (g<<8) | b);}
     size_t capacity_ = 0;

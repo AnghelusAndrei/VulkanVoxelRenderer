@@ -34,11 +34,9 @@
 #include "octree.hpp"
 #include "camera.hpp"
 #include "stats.hpp"
-// #include "object.hpp"
-// #include "materials.hpp"
-// #include "lights.hpp"
-// #include "objectCollection.hpp"
-// #include "utils.hpp"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_vulkan.h"
 
 #define MULTITHREADED
 
@@ -132,7 +130,7 @@ private:
     std::vector<VmaBuffer> uniformBuffers_;
     size_t currentFrame_ = 0;
     vk::CommandPool commandPool_;
-    vk::DescriptorPool descriptorSetPool;
+    vk::DescriptorPool computeDescriptorSetPool, graphicsDescriptorSetPool;
     vk::SwapchainKHR swapChain_;
     std::vector<vk::Image> images_;
     std::vector<vk::ImageView> imageViews_;
@@ -153,7 +151,7 @@ private:
     void setupFrameObjects();
 
     QueueSupportDetails utils_getQueueSupportDetails();
-    vk::DescriptorPool utils_createDescriptorPool(std::vector<vk::DescriptorType> descriptorTypes);
+    vk::DescriptorPool utils_createDescriptorPool(std::vector<vk::DescriptorType> descriptorTypes,int count);
     VmaBuffer utils_createBuffer(vk::DeviceSize size, vk::BufferUsageFlags bufferUsage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags);
     SwapChainSupportDetails utils_getSwapChainSupportDetails();
     vk::DescriptorSetLayout utils_createDescriptorSetLayout(std::vector<vk::DescriptorSetLayoutBinding> bindings);
