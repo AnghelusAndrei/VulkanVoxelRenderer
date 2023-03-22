@@ -28,17 +28,7 @@
 #include <glm/gtx/rotate_vector.hpp>
 #include <GLFW/glfw3.h>
 
-#include "config.hpp"
 #include "voxelengine.hpp"
-#include "logging.hpp"
-#include "octree.hpp"
-#include "camera.hpp"
-#include "stats.hpp"
-// #include "object.hpp"
-// #include "materials.hpp"
-// #include "lights.hpp"
-// #include "objectCollection.hpp"
-// #include "utils.hpp"
 
 #define MULTITHREADED
 

@@ -1,5 +1,8 @@
 #include "voxelengine.hpp"
 #include "camera.hpp"
+#include "PerlinNoise.hpp"
+#include "logging.hpp"
+#include "octree.hpp"
 
 VoxelEngine::VoxelEngine(Config config) : config_(config)
 {
@@ -13,7 +16,7 @@ VoxelEngine::VoxelEngine(Config config) : config_(config)
     glfwSetFramebufferSizeCallback(window, framebuffer_resized);
     glfwSetWindowMaximizeCallback(window, window_maximized);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    instance_ = new VulkanInstance(this);
+    
 }
 
 void VoxelEngine::run()
@@ -27,17 +30,19 @@ void VoxelEngine::run()
     glm::vec3 initialPosition = glm::vec3(0,0,0);
     glm::vec3 initialDirection = glm::vec3(1,0,0);
 
-    int octreeLength = 1<<8;
+    octree = new Octree(8);
 
-    Octree *octree = new Octree(8);
+    instance_ = new VulkanInstance(this);
+    
     Camera *camera = new Camera(window, initialPosition, initialDirection);
     instance_->setCamera(camera);
     std::thread renderThread(&VulkanInstance::run, instance_);
 
 
-    for(int i = 0; i < octreeLength; i++){
-        for(int j = 0; j < octreeLength; j++){
-            for(int k = 0; k < octreeLength; k++){
+    for(int i = 0; i < octree->length; i++){
+        for(int j = 0; j < octree->length; j++){
+            for(int k = 0; k < octree->length; k++){
+
                 float randIn5 = perlin.octave3D_01(((double)i * 0.01), ((double)j * 0.01), ((double)k * 0.01), 5);
                 if(randIn5 < 0.5)continue;
 
@@ -51,10 +56,11 @@ void VoxelEngine::run()
                 node.type = Octree::DEFAULT;
                 node.data=Octree::utils_rgb(rgb.r, rgb.g, rgb.b);
                 octree->insert(glm::uvec3(i,j,k), node);
+
             }
         }
     }
-    
+
     octree->upload(instance_);
     
     while (!glfwWindowShouldClose(window) && glfwGetKey(window, GLFW_KEY_ESCAPE)!= GLFW_PRESS)
