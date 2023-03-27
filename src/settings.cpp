@@ -1,4 +1,5 @@
 #include "settings.hpp"
+#include "logging.hpp"
 Settings *Settings::instance_;
 Settings::Settings(const char *path)
 {

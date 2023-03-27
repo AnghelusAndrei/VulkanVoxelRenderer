@@ -28,15 +28,7 @@
 #include <glm/gtx/rotate_vector.hpp>
 #include <GLFW/glfw3.h>
 
-#include "config.hpp"
 #include "voxelengine.hpp"
-#include "logging.hpp"
-#include "octree.hpp"
-#include "camera.hpp"
-#include "stats.hpp"
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_vulkan.h"
 
 #define MULTITHREADED
 

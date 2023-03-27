@@ -1,5 +1,5 @@
 #include "camera.hpp"
-
+#include "logging.hpp"
 
 Camera::Camera(GLFWwindow *window,  glm::vec3 position_, glm::vec3 direction_){
     window_ = window;

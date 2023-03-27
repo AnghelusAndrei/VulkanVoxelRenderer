@@ -5,10 +5,9 @@
 #include <stdlib.h>
 
 #include "vulkaninstance.hpp"
-#include "PerlinNoise.hpp"
 
-class Object;
 class Octree;
+class OctreeModel;
 
 class VulkanInstance;
 class VoxelEngine
@@ -23,6 +22,7 @@ public:
 public:
 
     GLFWwindow *window;
+    Octree *octree;
     bool running_;
     
 private:

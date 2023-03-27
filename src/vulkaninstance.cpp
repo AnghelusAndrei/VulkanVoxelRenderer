@@ -1,4 +1,7 @@
 #include "vulkaninstance.hpp"
+#include "logging.hpp"
+#include "camera.hpp"
+#include "octree.hpp"
 
 VulkanInstance::VulkanInstance(VoxelEngine *engine) : engine_(engine)
 {
@@ -387,12 +390,9 @@ void VulkanInstance::createPermanentObjects()
     //19173960 for depth 8
     //153391688 for depth 9
 
-    stagingBuffer_ = utils_createBuffer(19173960*sizeof(uint32_t), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
-    octreeBuffer_ = utils_createBuffer(19173960*sizeof(uint32_t), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    lightingBuffer_ = utils_createBuffer(19173960*sizeof(uint32_t), vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-
-
+    stagingBuffer_ = utils_createBuffer(engine_->octree->capacity*sizeof(uint32_t), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
+    octreeBuffer_ = utils_createBuffer(engine_->octree->capacity*sizeof(uint32_t), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    lightingBuffer_ = utils_createBuffer(engine_->octree->capacity*sizeof(uint32_t), vk::BufferUsageFlagBits::eStorageBuffer, VMA_MEMORY_USAGE_AUTO, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
 
 void VulkanInstance::createSwapchainObjects()
@@ -687,7 +687,7 @@ void VulkanInstance::createSwapchainObjects()
         vk::CommandBufferBeginInfo beginInfo{};
 
         commandBuffers_[i].begin(beginInfo);
-        commandBuffers_[i].copyBuffer(stagingBuffer_.buffer, octreeBuffer_.buffer, vk::BufferCopy{0, 0, 19173960*sizeof(uint32_t)});
+        commandBuffers_[i].copyBuffer(stagingBuffer_.buffer, octreeBuffer_.buffer, vk::BufferCopy{0, 0, engine_->octree->capacity*sizeof(uint32_t)});
         commandBuffers_[i].pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags{}, {},
                                            std::vector<vk::BufferMemoryBarrier>{
                                                {vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, octreeBuffer_.buffer, 0, VK_WHOLE_SIZE}},

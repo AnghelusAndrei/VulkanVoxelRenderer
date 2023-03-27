@@ -3,6 +3,7 @@
 #include <mutex>
 #include "vulkaninstance.hpp"
 #include "settings.hpp"
+
 struct Stats;
 class VulkanInstance;
 struct CameraUBO;
